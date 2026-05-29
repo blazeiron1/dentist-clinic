@@ -1,0 +1,86 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidenav-container {
+  flex: 1;
+  height: 100%;
+}
+
+.sidenav {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: var(--mat-sys-surface-container-low);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+.sidenav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  margin-bottom: 8px;
+
+  .logo-icon {
+    color: var(--mat-sys-primary);
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--mat-sys-primary);
+    letter-spacing: 0.3px;
+  }
+}
+
+.nav-list {
+  flex: 1;
+  padding-top: 4px;
+}
+
+.nav-item {
+  border-radius: 8px;
+  margin: 2px 8px;
+  transition: background 0.15s;
+
+  &.active-link {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+
+    mat-icon {
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+}
+
+.sidenav-footer {
+  padding: 8px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.user-btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+
+  .user-name {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.main-content {
+  background: var(--mat-sys-surface);
+  overflow-y: auto;
+}

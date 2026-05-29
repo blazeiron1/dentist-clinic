@@ -1,0 +1,80 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">Пациенти</h1>
+    <button mat-flat-button color="primary" (click)="newPatient()">
+      <mat-icon>person_add</mat-icon>
+      Нов пациент
+    </button>
+  </div>
+
+  <mat-form-field appearance="outline" class="search-field">
+    <mat-label>Пребарај</mat-label>
+    <input matInput [ngModel]="query()" (ngModelChange)="onSearch($event)"
+           placeholder="Ime, telefon ili EMBG…" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+
+  <div class="table-wrapper mat-elevation-z1">
+    <table mat-table [dataSource]="displayedPatients()" class="patients-table">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Пациент</th>
+        <td mat-cell *matCellDef="let p">
+          <div class="patient-name">{{ p.firstName }} {{ p.lastName }}</div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="phone">
+        <th mat-header-cell *matHeaderCellDef>Телефон</th>
+        <td mat-cell *matCellDef="let p">{{ p.phone }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="embg">
+        <th mat-header-cell *matHeaderCellDef>ЕМБГ</th>
+        <td mat-cell *matCellDef="let p">{{ p.embg || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="lastVisit">
+        <th mat-header-cell *matHeaderCellDef>Последна посета</th>
+        <td mat-cell *matCellDef="let p">
+          @let lv = lastVisit(p.id);
+          {{ lv ? (lv | date:'d.M.y') : '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="balance">
+        <th mat-header-cell *matHeaderCellDef>Долг</th>
+        <td mat-cell *matCellDef="let p">
+          @let b = balance(p.id);
+          <span [class.debt]="b > 0">{{ b > 0 ? (b | number) + ' ден' : '—' }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let p">
+          <button mat-icon-button (click)="goToPatient(p)" matTooltip="Отвори">
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns;"
+          class="patient-row" (click)="goToPatient(row)"></tr>
+
+      @if (totalCount() === 0) {
+        <tr class="mat-mdc-no-data-row">
+          <td [attr.colspan]="columns.length" class="no-data">Нема пациенти</td>
+        </tr>
+      }
+    </table>
+
+    <mat-paginator
+      [length]="totalCount()"
+      [pageSize]="pageSize()"
+      [pageSizeOptions]="[10, 25, 50]"
+      (page)="onPage($event)"
+      showFirstLastButtons>
+    </mat-paginator>
+  </div>
+</div>

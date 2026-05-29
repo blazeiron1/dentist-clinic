@@ -1,0 +1,68 @@
+<div class="page-container">
+  <div class="page-header">
+    <button mat-icon-button (click)="cancel()"><mat-icon>arrow_back</mat-icon></button>
+    <h1 class="page-title">Нов пациент</h1>
+  </div>
+
+  <mat-card>
+    <mat-card-content>
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Име *</mat-label>
+          <input matInput [ngModel]="form().firstName" (ngModelChange)="update('firstName', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Презиме *</mat-label>
+          <input matInput [ngModel]="form().lastName" (ngModelChange)="update('lastName', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Телефон *</mat-label>
+          <input matInput [ngModel]="form().phone" (ngModelChange)="update('phone', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Е-пошта</mat-label>
+          <input matInput type="email" [ngModel]="form().email" (ngModelChange)="update('email', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>ЕМБГ</mat-label>
+          <input matInput [ngModel]="form().embg" (ngModelChange)="update('embg', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Дата на раѓање</mat-label>
+          <input matInput type="date" [ngModel]="form().dateOfBirth" (ngModelChange)="update('dateOfBirth', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-span">
+          <mat-label>Адреса</mat-label>
+          <input matInput [ngModel]="form().address" (ngModelChange)="update('address', $event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-span">
+          <mat-label>Забелешки</mat-label>
+          <textarea matInput rows="3" [ngModel]="form().notes" (ngModelChange)="update('notes', $event)"></textarea>
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button mat-button (click)="cancel()">Откажи</button>
+      <button mat-flat-button color="primary" (click)="save()"
+              [disabled]="!form().firstName || !form().lastName || !form().phone">
+        Зачувај
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
+
+<style>
+  .page-container { padding: 24px; max-width: 800px; margin: 0 auto; }
+  .page-header { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .page-title { font-size: 22px; font-weight: 500; margin: 0; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  .full-span { grid-column: span 2; }
+</style>

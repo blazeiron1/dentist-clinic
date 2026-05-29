@@ -1,0 +1,234 @@
+.page-container {
+  padding: 20px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.header-body { flex: 1; }
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.patient-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+.small-icon { font-size: 16px; width: 16px; height: 16px; }
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+
+  &.status-scheduled { background: #e3f2fd; color: #1565c0; }
+  &.status-completed { background: #e8f5e9; color: #2e7d32; }
+  &.status-cancelled { background: #f5f5f5; color: #616161; }
+  &.status-no-show { background: #fff3e0; color: #e65100; }
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.header-notes {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 4px 0 0;
+  font-style: italic;
+}
+
+.status-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-self: center;
+}
+
+// ── Body layout ───────────────────────────────────────────────────────────────
+.detail-body {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+// ── Interventions panel ───────────────────────────────────────────────────────
+.interventions-panel {
+  flex: 1;
+  min-width: 460px;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.totals {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  flex-wrap: wrap;
+
+  .paid { color: #2e7d32; }
+  .debt { color: var(--mat-sys-error); }
+}
+
+.int-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-left-width: 4px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  background: var(--mat-sys-surface-container-lowest);
+}
+
+.int-name-cell {
+  flex: 1;
+  min-width: 180px;
+  position: relative;
+}
+
+.int-name-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--mat-sys-outline);
+  outline: none;
+  font-size: 14px;
+  padding: 4px 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+
+  &:focus { border-bottom-color: var(--mat-sys-primary); }
+  &::placeholder { color: var(--mat-sys-on-surface-variant); opacity: 0.7; }
+}
+
+.catalog-price {
+  float: right;
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.teeth-btn {
+  min-width: 64px;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.int-price-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 90px;
+}
+
+.price-input {
+  width: 70px;
+  border: none;
+  border-bottom: 1px solid var(--mat-sys-outline);
+  outline: none;
+  font-size: 14px;
+  padding: 4px 0;
+  text-align: right;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+
+  &:focus { border-bottom-color: var(--mat-sys-primary); }
+}
+
+.currency { font-size: 12px; color: var(--mat-sys-on-surface-variant); }
+
+.int-paid-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 80px;
+}
+
+.paid-amount { font-size: 13px; }
+.outstanding-badge { font-size: 11px; color: var(--mat-sys-error); }
+
+.paid-icon {
+  color: #43a047;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-int-btn { margin-top: 8px; width: 100%; }
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// ── Tooth chart panel ─────────────────────────────────────────────────────────
+.chart-panel {
+  width: 560px;
+  flex-shrink: 0;
+}
+
+.chart-legend {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}

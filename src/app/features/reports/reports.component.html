@@ -1,0 +1,103 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1 class="page-title">Извештаи</h1>
+    <button mat-stroked-button (click)="print()" class="no-print">
+      <mat-icon>print</mat-icon>Печати
+    </button>
+  </div>
+
+  <!-- Range selector -->
+  <div class="range-bar no-print">
+    <mat-button-toggle-group [value]="range()" (change)="range.set($event.value)">
+      <mat-button-toggle value="today">Денес</mat-button-toggle>
+      <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
+      <mat-button-toggle value="month">Овој месец</mat-button-toggle>
+      <mat-button-toggle value="custom">Прилагодено</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    @if (range() === 'custom') {
+      <mat-form-field appearance="outline" class="date-field">
+        <mat-label>Од</mat-label>
+        <input matInput type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="date-field">
+        <mat-label>До</mat-label>
+        <input matInput type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+      </mat-form-field>
+    }
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-row">
+    <mat-card class="kpi-card">
+      <mat-icon class="kpi-icon revenue">payments</mat-icon>
+      <div class="kpi-label">Приход</div>
+      <div class="kpi-value">{{ data().revenue | number }} ден</div>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-icon class="kpi-icon outstanding">account_balance_wallet</mat-icon>
+      <div class="kpi-label">Неплатено</div>
+      <div class="kpi-value outstanding-val">{{ data().outstanding | number }} ден</div>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-icon class="kpi-icon appts">calendar_month</mat-icon>
+      <div class="kpi-label">Средби</div>
+      <div class="kpi-value">{{ data().appointmentCount }}</div>
+    </mat-card>
+    <mat-card class="kpi-card">
+      <mat-icon class="kpi-icon ints">medical_services</mat-icon>
+      <div class="kpi-label">Интервенции</div>
+      <div class="kpi-value">{{ data().interventionCount }}</div>
+    </mat-card>
+  </div>
+
+  <!-- Charts row -->
+  <div class="charts-row">
+    <!-- Bar chart: revenue by type -->
+    <mat-card class="chart-card bar-card">
+      <h3 class="chart-title">Приход по вид интервенција</h3>
+      @if (data().revenueByType.length === 0) {
+        <p class="empty-chart">Нема податоци</p>
+      } @else {
+        <div class="bar-chart">
+          @for (item of data().revenueByType; track item.name) {
+            <div class="bar-row">
+              <span class="bar-label" [title]="item.name">{{ item.name }}</span>
+              <div class="bar-track">
+                <div class="bar-fill"
+                     [style.width.%]="maxBarValue() > 0 ? (item.amount / maxBarValue()) * 100 : 0">
+                </div>
+              </div>
+              <span class="bar-value">{{ item.amount | number }}</span>
+            </div>
+          }
+        </div>
+      }
+    </mat-card>
+
+    <!-- Pie chart: payment method -->
+    <mat-card class="chart-card pie-card">
+      <h3 class="chart-title">Начин на плаќање</h3>
+      @if (data().paymentMethodBreakdown.length === 0) {
+        <p class="empty-chart">Нема податоци</p>
+      } @else {
+        <div class="pie-wrapper">
+          <svg viewBox="0 0 120 120" class="pie-svg">
+            @for (s of piePaths(); track s.label) {
+              <path [attr.d]="s.path" [attr.fill]="s.color" stroke="#fff" stroke-width="1" />
+            }
+          </svg>
+          <div class="pie-legend">
+            @for (s of piePaths(); track s.label) {
+              <div class="pie-legend-item">
+                <span class="pie-swatch" [style.background]="s.color"></span>
+                <span>{{ s.label }}</span>
+                <span class="pie-pct">{{ s.pct }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </mat-card>
+  </div>
+</div>

@@ -1,0 +1,228 @@
+@if (patient(); as p) {
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+      <div class="header-info">
+        <h1 class="page-title">{{ p.firstName }} {{ p.lastName }}</h1>
+        <span class="phone-badge"><mat-icon class="small-icon">phone</mat-icon>{{ p.phone }}</span>
+      </div>
+      @if (totalOutstanding() > 0) {
+        <div class="debt-badge">
+          <mat-icon>account_balance_wallet</mat-icon>
+          Долг: {{ totalOutstanding() | number }} ден
+        </div>
+      }
+    </div>
+
+    <!-- Tabs -->
+    <mat-tab-group animationDuration="150ms" class="detail-tabs">
+
+      <!-- Tab 1: Overview -->
+      <mat-tab label="Информации">
+        <div class="tab-content">
+          @if (!editMode()) {
+            <div class="info-grid">
+              <div class="info-row"><span class="label">Телефон</span><span>{{ p.phone }}</span></div>
+              <div class="info-row"><span class="label">Е-пошта</span><span>{{ p.email || '—' }}</span></div>
+              <div class="info-row"><span class="label">ЕМБГ</span><span>{{ p.embg || '—' }}</span></div>
+              <div class="info-row"><span class="label">Дата на раѓање</span><span>{{ p.dateOfBirth ? (p.dateOfBirth | date:'d.M.y') : '—' }}</span></div>
+              <div class="info-row"><span class="label">Адреса</span><span>{{ p.address || '—' }}</span></div>
+              <div class="info-row full"><span class="label">Забелешки</span><span>{{ p.notes || '—' }}</span></div>
+            </div>
+            <button mat-stroked-button (click)="startEdit()"><mat-icon>edit</mat-icon>Уреди</button>
+          } @else {
+            <div class="form-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Телефон</mat-label>
+                <input matInput [ngModel]="editForm().phone" (ngModelChange)="updateForm('phone', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Е-пошта</mat-label>
+                <input matInput [ngModel]="editForm().email" (ngModelChange)="updateForm('email', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>ЕМБГ</mat-label>
+                <input matInput [ngModel]="editForm().embg" (ngModelChange)="updateForm('embg', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Дата на раѓање</mat-label>
+                <input matInput type="date" [ngModel]="editForm().dateOfBirth" (ngModelChange)="updateForm('dateOfBirth', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-span">
+                <mat-label>Адреса</mat-label>
+                <input matInput [ngModel]="editForm().address" (ngModelChange)="updateForm('address', $event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full-span">
+                <mat-label>Забелешки</mat-label>
+                <textarea matInput rows="2" [ngModel]="editForm().notes" (ngModelChange)="updateForm('notes', $event)"></textarea>
+              </mat-form-field>
+            </div>
+            <div class="edit-actions">
+              <button mat-button (click)="cancelEdit()">Откажи</button>
+              <button mat-flat-button color="primary" (click)="saveEdit()">Зачувај</button>
+            </div>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- Tab 2: Medical history -->
+      <mat-tab label="Медицинска историја">
+        <div class="tab-content">
+          <section class="medical-section">
+            <h3>Алергии</h3>
+            <mat-chip-set>
+              @for (a of p.allergies; track a) {
+                <mat-chip (removed)="removeAllergy(a)">
+                  {{ a }}
+                  <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                </mat-chip>
+              }
+            </mat-chip-set>
+            <div class="add-row">
+              <input class="add-input" placeholder="Додади алергија…"
+                     [ngModel]="newAllergy()" (ngModelChange)="newAllergy.set($event)"
+                     (keydown.enter)="addAllergy()" />
+              <button mat-icon-button color="primary" (click)="addAllergy()"><mat-icon>add</mat-icon></button>
+            </div>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section class="medical-section">
+            <h3>Состојби / дијагнози</h3>
+            <mat-chip-set>
+              @for (c of p.conditions; track c) {
+                <mat-chip (removed)="removeCondition(c)">
+                  {{ c }}
+                  <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                </mat-chip>
+              }
+            </mat-chip-set>
+            <div class="add-row">
+              <input class="add-input" placeholder="Додади состојба…"
+                     [ngModel]="newCondition()" (ngModelChange)="newCondition.set($event)"
+                     (keydown.enter)="addCondition()" />
+              <button mat-icon-button color="primary" (click)="addCondition()"><mat-icon>add</mat-icon></button>
+            </div>
+          </section>
+
+          <mat-divider></mat-divider>
+
+          <section class="medical-section">
+            <h3>Лекови</h3>
+            <mat-chip-set>
+              @for (m of p.medications; track m) {
+                <mat-chip (removed)="removeMedication(m)">
+                  {{ m }}
+                  <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                </mat-chip>
+              }
+            </mat-chip-set>
+            <div class="add-row">
+              <input class="add-input" placeholder="Додади лек…"
+                     [ngModel]="newMedication()" (ngModelChange)="newMedication.set($event)"
+                     (keydown.enter)="addMedication()" />
+              <button mat-icon-button color="primary" (click)="addMedication()"><mat-icon>add</mat-icon></button>
+            </div>
+          </section>
+        </div>
+      </mat-tab>
+
+      <!-- Tab 3: Appointments -->
+      <mat-tab label="Средби">
+        <div class="tab-content">
+          @if (appointments().length === 0) {
+            <p class="empty-state">Нема средби</p>
+          }
+          @for (a of appointments(); track a.id) {
+            <div class="appt-card" [routerLink]="['/appointments', a.id]">
+              <div class="appt-card-left">
+                <span class="appt-date">{{ a.dateTime | date:'d.M.y HH:mm' }}</span>
+                <span class="appt-duration">{{ a.durationMinutes }} мин</span>
+              </div>
+              <div class="appt-card-right">
+                <span class="status-chip status-{{a.status}}">{{ statusLabel(a.status) }}</span>
+                @let ints = interventionsForAppt(a.id);
+                @if (ints.length) {
+                  <span class="int-count">{{ ints.length }} интервенција</span>
+                }
+              </div>
+              <mat-icon class="appt-arrow">chevron_right</mat-icon>
+            </div>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- Tab 4: Financials -->
+      <mat-tab label="Финансии">
+        <div class="tab-content">
+          <div class="fin-summary">
+            <div class="fin-card">
+              <span class="fin-label">Вкупно наплатено</span>
+              <span class="fin-value">{{ totalCharged() | number }} ден</span>
+            </div>
+            <div class="fin-card paid">
+              <span class="fin-label">Платено</span>
+              <span class="fin-value">{{ totalPaid() | number }} ден</span>
+            </div>
+            <div class="fin-card outstanding" [class.has-debt]="totalOutstanding() > 0">
+              <span class="fin-label">Долг</span>
+              <span class="fin-value">{{ totalOutstanding() | number }} ден</span>
+            </div>
+          </div>
+
+          @if (allInterventions().length === 0) {
+            <p class="empty-state">Нема интервенции</p>
+          } @else {
+            <table mat-table [dataSource]="allInterventions()" class="fin-table mat-elevation-z1">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Датум</th>
+                <td mat-cell *matCellDef="let i">—</td>
+              </ng-container>
+              <ng-container matColumnDef="intervention">
+                <th mat-header-cell *matHeaderCellDef>Интервенција</th>
+                <td mat-cell *matCellDef="let i">{{ i.name }}</td>
+              </ng-container>
+              <ng-container matColumnDef="teeth">
+                <th mat-header-cell *matHeaderCellDef>Заби</th>
+                <td mat-cell *matCellDef="let i">{{ i.teeth.join(', ') || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="price">
+                <th mat-header-cell *matHeaderCellDef>Цена</th>
+                <td mat-cell *matCellDef="let i">{{ i.price | number }} ден</td>
+              </ng-container>
+              <ng-container matColumnDef="paid">
+                <th mat-header-cell *matHeaderCellDef>Платено</th>
+                <td mat-cell *matCellDef="let i">{{ i.paidAmount | number }} ден</td>
+              </ng-container>
+              <ng-container matColumnDef="outstanding">
+                <th mat-header-cell *matHeaderCellDef>Долг</th>
+                <td mat-cell *matCellDef="let i">
+                  <span [class.debt-cell]="i.price - i.paidAmount > 0">
+                    {{ (i.price - i.paidAmount) | number }} ден
+                  </span>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="financialCols"></tr>
+              <tr mat-row *matRowDef="let r; columns: financialCols;"></tr>
+            </table>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- Tab 5: Documents -->
+      <mat-tab label="Документи">
+        <div class="tab-content">
+          <div class="upload-area">
+            <mat-icon class="upload-icon">cloud_upload</mat-icon>
+            <p>Повлечи документ тука или</p>
+            <button mat-stroked-button>Избери датотека</button>
+          </div>
+          <p class="empty-state">Нема прикачени документи</p>
+        </div>
+      </mat-tab>
+
+    </mat-tab-group>
+  </div>
+}

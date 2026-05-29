@@ -1,0 +1,106 @@
+:host {
+  display: block;
+}
+
+.tooth-chart-wrapper {
+  display: inline-flex;
+  justify-content: center;
+  user-select: none;
+}
+
+.tooth-chart-svg {
+  overflow: visible;
+}
+
+// ── Dividers ────────────────────────────────────────────────────────────────
+.divider {
+  stroke: #cfd8dc;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+// ── Quadrant labels ─────────────────────────────────────────────────────────
+.quadrant-label {
+  font-size: 10px;
+  fill: #90a4ae;
+  font-family: inherit;
+  text-anchor: middle;
+}
+
+// ── Tooth group ─────────────────────────────────────────────────────────────
+.tooth-group {
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.15s;
+
+  &:hover .tooth-body {
+    fill: #e3f2fd;
+    stroke: #1976d2;
+  }
+
+  &:focus-visible .tooth-body {
+    stroke: #f57c00;
+    stroke-width: 2.5;
+  }
+
+  &.readonly {
+    cursor: default;
+    pointer-events: none;
+  }
+}
+
+// ── Tooth body ──────────────────────────────────────────────────────────────
+.tooth-body {
+  fill: #fff;
+  stroke: #546e7a;
+  stroke-width: 1.5;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+.tooth-group.selected .tooth-body {
+  fill: #bbdefb;
+  stroke: #1565c0;
+  stroke-width: 2;
+}
+
+// ── Selection ring ──────────────────────────────────────────────────────────
+.selection-ring {
+  fill: none;
+  stroke: #1976d2;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
+
+// ── Groove marks (molar detail) ─────────────────────────────────────────────
+.groove {
+  stroke: #b0bec5;
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.tooth-group.selected .groove {
+  stroke: #90caf9;
+}
+
+// ── FDI number label ────────────────────────────────────────────────────────
+.tooth-label {
+  font-size: 9px;
+  fill: #546e7a;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.selected-label {
+  fill: #1565c0;
+  font-weight: 700;
+}
+
+// ── Read-only wrapper ────────────────────────────────────────────────────────
+.tooth-chart-wrapper.readonly .tooth-group {
+  cursor: default;
+}

@@ -1,0 +1,152 @@
+@if (appointment(); as a) {
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <button mat-icon-button (click)="goBack()"><mat-icon>arrow_back</mat-icon></button>
+      <div class="header-body">
+        <div class="header-top">
+          @if (patient(); as p) {
+            <a class="patient-link" [routerLink]="['/patients', p.id]">
+              <mat-icon class="small-icon">person</mat-icon>
+              {{ p.firstName }} {{ p.lastName }}
+            </a>
+          }
+          <span class="status-badge status-{{ a.status }}">{{ statusLabel(a.status) }}</span>
+        </div>
+        <div class="header-meta">
+          <mat-icon class="small-icon">schedule</mat-icon>
+          {{ a.dateTime | date:'EEEE, d MMMM y – HH:mm' }} &nbsp;·&nbsp; {{ a.durationMinutes }} мин
+        </div>
+        @if (a.notes) {
+          <p class="header-notes">{{ a.notes }}</p>
+        }
+      </div>
+
+      <!-- Status actions -->
+      <div class="status-actions">
+        @if (a.status === 'scheduled') {
+          <button mat-stroked-button color="primary" (click)="setStatus('completed')">
+            <mat-icon>check_circle</mat-icon> Заврши
+          </button>
+          <button mat-stroked-button (click)="setStatus('cancelled')">
+            <mat-icon>cancel</mat-icon> Откажи
+          </button>
+          <button mat-stroked-button color="warn" (click)="setStatus('no-show')">
+            <mat-icon>person_off</mat-icon> Не дојде
+          </button>
+        }
+        @if (a.status !== 'scheduled') {
+          <button mat-stroked-button (click)="setStatus('scheduled')">
+            <mat-icon>restart_alt</mat-icon> Врати на закажана
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="detail-body">
+      <!-- Interventions section -->
+      <div class="interventions-panel">
+        <div class="section-header">
+          <h2 class="section-title">Интервенции</h2>
+          <div class="totals">
+            <span>Вкупно: <strong>{{ totalCharged() | number }} ден</strong></span>
+            <span>Платено: <strong class="paid">{{ totalPaid() | number }} ден</strong></span>
+            @if (totalCharged() - totalPaid() > 0) {
+              <span>Долг: <strong class="debt">{{ (totalCharged() - totalPaid()) | number }} ден</strong></span>
+            }
+          </div>
+        </div>
+
+        @if (interventions().length === 0) {
+          <p class="empty-state">Нема интервенции. Додади прва.</p>
+        }
+
+        @for (int of interventions(); track int.id; let idx = $index) {
+          <div class="int-row" [style.border-left-color]="getInterventionColor(idx)">
+            <!-- Name autocomplete -->
+            <div class="int-name-cell">
+              <input class="int-name-input"
+                     [value]="int.name"
+                     (input)="onNameQuery(int.id, $any($event.target).value)"
+                     placeholder="Интервенција…"
+                     [matAutocomplete]="nameAc" />
+              <mat-autocomplete #nameAc
+                                (optionSelected)="onCatalogSelect(int.id, $event.option.value)">
+                @for (item of catalogSuggestions(); track item.id) {
+                  <mat-option [value]="item">
+                    {{ item.name }}
+                    <span class="catalog-price">{{ item.defaultPrice | number }} ден</span>
+                  </mat-option>
+                }
+              </mat-autocomplete>
+            </div>
+
+            <!-- Teeth button -->
+            <button mat-stroked-button class="teeth-btn" (click)="openToothPicker(int)"
+                    [matTooltip]="int.teeth.length ? 'Заби: ' + int.teeth.join(', ') : 'Одбери заби'">
+              <mat-icon>123</mat-icon>
+              @if (int.teeth.length) { {{ int.teeth.length }} } @else { — }
+            </button>
+
+            <!-- Price -->
+            <div class="int-price-cell">
+              <input class="price-input" type="number" [value]="int.price"
+                     (change)="updatePrice(int.id, $any($event.target).value)"
+                     placeholder="0" />
+              <span class="currency">ден</span>
+            </div>
+
+            <!-- Paid -->
+            <div class="int-paid-cell">
+              <span class="paid-amount">{{ int.paidAmount | number }} ден</span>
+              @if (int.price - int.paidAmount > 0) {
+                <span class="outstanding-badge">долг {{ (int.price - int.paidAmount) | number }}</span>
+              }
+            </div>
+
+            <!-- Payment button -->
+            @if (int.price - int.paidAmount > 0) {
+              <button mat-icon-button color="primary" (click)="openPayment(int)"
+                      matTooltip="Додади уплата">
+                <mat-icon>payments</mat-icon>
+              </button>
+            } @else {
+              <mat-icon class="paid-icon" matTooltip="Платено">check_circle</mat-icon>
+            }
+
+            <!-- Remove -->
+            <button mat-icon-button color="warn" (click)="removeIntervention(int.id)" matTooltip="Избриши">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        }
+
+        <button mat-stroked-button class="add-int-btn" (click)="addIntervention()">
+          <mat-icon>add</mat-icon>
+          Додади интервенција
+        </button>
+      </div>
+
+      <!-- Tooth chart -->
+      <div class="chart-panel">
+        <h2 class="section-title">Забен дијаграм</h2>
+        <app-tooth-chart
+          [interventionTeeth]="interventionTeethMap()"
+          [selectedTeeth]="[]"
+          [readonly]="true" />
+        @if (interventions().length > 0) {
+          <div class="chart-legend">
+            @for (int of interventions(); track int.id; let idx = $index) {
+              @if (int.teeth.length > 0) {
+                <div class="chart-legend-item">
+                  <span class="legend-swatch" [style.background]="getInterventionColor(idx)"></span>
+                  <span>{{ int.name }}</span>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

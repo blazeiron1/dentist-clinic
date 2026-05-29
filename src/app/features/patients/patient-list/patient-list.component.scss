@@ -1,0 +1,55 @@
+.page-container {
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.search-field {
+  width: 360px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.table-wrapper {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.patients-table {
+  width: 100%;
+}
+
+.patient-row {
+  cursor: pointer;
+  transition: background 0.12s;
+
+  &:hover { background: var(--mat-sys-surface-variant); }
+}
+
+.patient-name {
+  font-weight: 500;
+}
+
+.debt {
+  color: var(--mat-sys-error);
+  font-weight: 500;
+}
+
+.no-data {
+  text-align: center;
+  padding: 32px;
+  color: var(--mat-sys-on-surface-variant);
+}

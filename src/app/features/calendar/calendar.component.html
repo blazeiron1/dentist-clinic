@@ -1,0 +1,102 @@
+<div class="cal-page">
+  <!-- Toolbar -->
+  <div class="cal-toolbar">
+    <div class="cal-toolbar-left">
+      <button mat-icon-button (click)="prev()" matTooltip="Претходно">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button mat-stroked-button (click)="today()">Денес</button>
+      <button mat-icon-button (click)="next()" matTooltip="Следно">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+
+      @if (view() === 'week') {
+        <span class="cal-title">
+          {{ weekDays()[0] | date:'d MMM' }} – {{ weekDays()[6] | date:'d MMM y' }}
+        </span>
+      } @else {
+        <span class="cal-title">{{ anchorDate() | date:'EEEE, d MMMM y' }}</span>
+      }
+    </div>
+
+    <div class="cal-toolbar-right">
+      <div class="view-toggle">
+        <button mat-button [class.active-view]="view()==='week'" (click)="setView('week')">Недела</button>
+        <button mat-button [class.active-view]="view()==='day'" (click)="setView('day')">Ден</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="cal-legend">
+    @for (s of statusList; track s.key) {
+      <span class="legend-dot" [style.background]="s.color"></span>
+      <span class="legend-label">{{ s.label }}</span>
+    }
+  </div>
+
+  <!-- Grid -->
+  <div class="cal-scroll">
+    @if (view() === 'week') {
+      <div class="week-grid">
+        <!-- Day headers -->
+        <div class="time-gutter-header"></div>
+        @for (day of weekDays(); track day.getTime(); let i = $index) {
+          <div class="day-header" [class.today]="isToday(day)">
+            <span class="day-name">{{ day | date:'EEE' }}</span>
+            <span class="day-num" [class.today-circle]="isToday(day)">{{ day | date:'d' }}</span>
+          </div>
+        }
+
+        <!-- Time rows -->
+        @for (h of hours; track h) {
+          <div class="time-label">{{ h }}:00</div>
+          @for (day of weekDays(); track day.getTime(); let di = $index) {
+            <div class="time-slot" (click)="openNewAppt(di, h)"></div>
+          }
+        }
+
+        <!-- Appointment blocks -->
+        @for (ca of calendarAppts(); track ca.appt.id) {
+          <div class="appt-block"
+               [style.top]="ca.top"
+               [style.height]="ca.height"
+               [style.background]="ca.color + '22'"
+               [style.border-left]="'3px solid ' + ca.color"
+               [style.grid-column]="ca.col + 2"
+               (click)="openAppt(ca.appt, $event)"
+               [matTooltip]="ca.patientName + ' – ' + ca.appt.durationMinutes + ' мин'">
+            <span class="appt-name">{{ ca.patientName }}</span>
+            <span class="appt-time">{{ ca.appt.dateTime | date:'HH:mm' }}</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <!-- Day view -->
+      <div class="day-view">
+        <div class="time-col">
+          @for (h of hours; track h) {
+            <div class="time-row-label">{{ h }}:00</div>
+          }
+        </div>
+        <div class="day-col">
+          @for (h of hours; track h) {
+            <div class="day-slot" (click)="openNewAppt(0, h)"></div>
+          }
+          @for (ca of dayAppts(); track ca.appt.id) {
+            <div class="appt-block day-appt-block"
+                 [style.top]="ca.top"
+                 [style.height]="ca.height"
+                 [style.background]="ca.color + '22'"
+                 [style.border-left]="'3px solid ' + ca.color"
+                 (click)="openAppt(ca.appt, $event)"
+                 [matTooltip]="ca.patientName + ' – ' + ca.appt.durationMinutes + ' мин'">
+              <span class="appt-name">{{ ca.patientName }}</span>
+              <span class="appt-time">{{ ca.appt.dateTime | date:'HH:mm' }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
