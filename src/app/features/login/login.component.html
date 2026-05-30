@@ -13,15 +13,15 @@
         <p class="error-msg">{{ error() }}</p>
       }
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Е-пошта</mat-label>
-        <input matInput type="email" [(ngModel)]="email" (ngModelChange)="email.set($event)" />
-        <mat-icon matSuffix>email</mat-icon>
+        <mat-label>Корисничко име</mat-label>
+        <input matInput [ngModel]="username()" (ngModelChange)="username.set($event)" />
+        <mat-icon matSuffix>person</mat-icon>
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Лозинка</mat-label>
         <input matInput [type]="hidePassword() ? 'password' : 'text'"
-               [(ngModel)]="password" (ngModelChange)="password.set($event)" />
+               [ngModel]="password()" (ngModelChange)="password.set($event)" />
         <button mat-icon-button matSuffix (click)="hidePassword.set(!hidePassword())" type="button">
           <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
@@ -29,8 +29,9 @@
     </mat-card-content>
 
     <mat-card-actions>
-      <button mat-flat-button color="primary" class="full-width login-btn" (click)="submit()">
-        Најави се
+      <button mat-flat-button color="primary" class="full-width login-btn"
+              (click)="submit()" [disabled]="loading()">
+        @if (loading()) { Се најавува… } @else { Најави се }
       </button>
     </mat-card-actions>
   </mat-card>

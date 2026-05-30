@@ -65,9 +65,9 @@
                [style.border-left]="'3px solid ' + ca.color"
                [style.grid-column]="ca.col + 2"
                (click)="openAppt(ca.appt, $event)"
-               [matTooltip]="ca.patientName + ' – ' + ca.appt.durationMinutes + ' мин'">
+               [matTooltip]="getTooltip(ca)">
             <span class="appt-name">{{ ca.patientName }}</span>
-            <span class="appt-time">{{ ca.appt.dateTime | date:'HH:mm' }}</span>
+            <span class="appt-time">{{ ca.appt.startsAt | date:'HH:mm' }}</span>
           </div>
         }
       </div>
@@ -90,9 +90,9 @@
                  [style.background]="ca.color + '22'"
                  [style.border-left]="'3px solid ' + ca.color"
                  (click)="openAppt(ca.appt, $event)"
-                 [matTooltip]="ca.patientName + ' – ' + ca.appt.durationMinutes + ' мин'">
+                 [matTooltip]="getTooltip(ca)">
               <span class="appt-name">{{ ca.patientName }}</span>
-              <span class="appt-time">{{ ca.appt.dateTime | date:'HH:mm' }}</span>
+              <span class="appt-time">{{ ca.appt.startsAt | date:'HH:mm' }}</span>
             </div>
           }
         </div>

@@ -31,10 +31,18 @@ export class PatientNewComponent {
   save(): void {
     const f = this.form();
     if (!f.firstName || !f.lastName || !f.phone) return;
-    const patient = this.patientSvc.add({
-      ...f, allergies: [], conditions: [], medications: [],
+    this.patientSvc.create({
+      firstName: f.firstName,
+      lastName: f.lastName,
+      phone: f.phone || undefined,
+      email: f.email || undefined,
+      embg: f.embg || undefined,
+      dateOfBirth: f.dateOfBirth || undefined,
+      address: f.address || undefined,
+      notes: f.notes || undefined,
+    }).subscribe(patient => {
+      this.router.navigate(['/patients', patient.id]);
     });
-    this.router.navigate(['/patients', patient.id]);
   }
 
   cancel(): void {

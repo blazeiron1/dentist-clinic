@@ -33,22 +33,6 @@
         <td mat-cell *matCellDef="let p">{{ p.embg || '—' }}</td>
       </ng-container>
 
-      <ng-container matColumnDef="lastVisit">
-        <th mat-header-cell *matHeaderCellDef>Последна посета</th>
-        <td mat-cell *matCellDef="let p">
-          @let lv = lastVisit(p.id);
-          {{ lv ? (lv | date:'d.M.y') : '—' }}
-        </td>
-      </ng-container>
-
-      <ng-container matColumnDef="balance">
-        <th mat-header-cell *matHeaderCellDef>Долг</th>
-        <td mat-cell *matCellDef="let p">
-          @let b = balance(p.id);
-          <span [class.debt]="b > 0">{{ b > 0 ? (b | number) + ' ден' : '—' }}</span>
-        </td>
-      </ng-container>
-
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef></th>
         <td mat-cell *matCellDef="let p">

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx ng:*)",
+      "Bash(npm install:*)",
+      "Bash(curl -s -w \"\\\\n%{http_code}\" 'http://localhost:8080/api/v1/patients?page=0&size=10' -H 'Cookie: JSESSIONID=B33AD17155F84C8D5D6C86A77CD22C7F')",
+      "Bash(ls \"C:\\\\Users\\\\kosto\\\\IdeaSnapshots\\\\dentistERP-BE/target/\"*.log)",
+      "Bash(pg_isready -p 5433)",
+      "Bash(curl:*)"
+    ]
+  }
+}

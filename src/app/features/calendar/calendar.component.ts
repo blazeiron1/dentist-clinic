@@ -1,5 +1,5 @@
 import {
-  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy,
+  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
@@ -9,18 +9,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
 import { AppointmentService } from '../../core/services/appointment.service';
-import { PatientService } from '../../core/services/patient.service';
 import { Appointment } from '../../core/models';
+import { STATUS_COLORS, APPOINTMENT_STATUSES } from '../../core/constants';
 import { NewAppointmentDialogComponent } from './new-appointment-dialog/new-appointment-dialog.component';
 
 export type CalendarView = 'week' | 'day';
-
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: '#1976d2',
-  completed: '#388e3c',
-  cancelled: '#757575',
-  'no-show': '#f57c00',
-};
 
 interface CalendarAppt {
   appt: Appointment;
@@ -28,7 +21,7 @@ interface CalendarAppt {
   color: string;
   top: string;
   height: string;
-  col: number; // 0-6 for week, ignored for day
+  col: number;
 }
 
 @Component({
@@ -41,15 +34,15 @@ interface CalendarAppt {
 })
 export class CalendarComponent implements OnInit {
   private apptSvc = inject(AppointmentService);
-  private patientSvc = inject(PatientService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
 
   view = signal<CalendarView>('week');
-  anchorDate = signal(new Date()); // start of current week/day
+  anchorDate = signal(new Date());
+  private _appointments = signal<Appointment[]>([]);
 
-  readonly hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8..19
-  readonly slotHeight = 60; // px per hour
+  readonly hours = Array.from({ length: 12 }, (_, i) => i + 8);
+  readonly slotHeight = 60;
 
   weekDays = computed(() => {
     const monday = this.getMonday(this.anchorDate());
@@ -62,21 +55,18 @@ export class CalendarComponent implements OnInit {
 
   calendarAppts = computed<CalendarAppt[]>(() => {
     const days = this.weekDays();
-    const from = days[0];
-    const to = new Date(days[6]);
-    to.setHours(23, 59, 59);
-
-    return this.apptSvc.byDateRange(from, to).map(appt => {
-      const patient = this.patientSvc.getById(appt.patientId);
-      const dt = new Date(appt.dateTime);
+    return this._appointments().map(appt => {
+      const dt = new Date(appt.startsAt);
+      const endDt = new Date(appt.endsAt);
+      const durationMin = (endDt.getTime() - dt.getTime()) / 60000;
       const dayIdx = days.findIndex(d => d.toDateString() === dt.toDateString());
       const minuteFromEight = (dt.getHours() - 8) * 60 + dt.getMinutes();
       const top = (minuteFromEight / 60) * this.slotHeight;
-      const height = Math.max((appt.durationMinutes / 60) * this.slotHeight - 2, 20);
+      const height = Math.max((durationMin / 60) * this.slotHeight - 2, 20);
       return {
         appt,
-        patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
-        color: STATUS_COLORS[appt.status],
+        patientName: `${appt.patientFirstName} ${appt.patientLastName}`,
+        color: STATUS_COLORS[appt.status] ?? '#757575',
         top: top + 'px',
         height: height + 'px',
         col: dayIdx,
@@ -85,19 +75,35 @@ export class CalendarComponent implements OnInit {
   });
 
   dayAppts = computed<CalendarAppt[]>(() => {
-    const d = this.anchorDate();
-    const from = new Date(d); from.setHours(0, 0, 0);
-    const to = new Date(d); to.setHours(23, 59, 59);
-    return this.apptSvc.byDateRange(from, to).map(appt => {
-      const patient = this.patientSvc.getById(appt.patientId);
-      const dt = new Date(appt.dateTime);
+    return this._appointments().map(appt => {
+      const dt = new Date(appt.startsAt);
+      const endDt = new Date(appt.endsAt);
+      const durationMin = (endDt.getTime() - dt.getTime()) / 60000;
       const minuteFromEight = (dt.getHours() - 8) * 60 + dt.getMinutes();
       const top = (minuteFromEight / 60) * this.slotHeight;
-      const height = Math.max((appt.durationMinutes / 60) * this.slotHeight - 2, 20);
-      return { appt, patientName: patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown',
-        color: STATUS_COLORS[appt.status], top: top + 'px', height: height + 'px', col: 0 };
+      const height = Math.max((durationMin / 60) * this.slotHeight - 2, 20);
+      return {
+        appt,
+        patientName: `${appt.patientFirstName} ${appt.patientLastName}`,
+        color: STATUS_COLORS[appt.status] ?? '#757575',
+        top: top + 'px',
+        height: height + 'px',
+        col: 0,
+      };
     });
   });
+
+  private durationOf(appt: Appointment): number {
+    return Math.round((new Date(appt.endsAt).getTime() - new Date(appt.startsAt).getTime()) / 60000);
+  }
+
+  constructor() {
+    effect(() => {
+      const _v = this.view();
+      const _a = this.anchorDate();
+      untracked(() => this.loadAppointments());
+    });
+  }
 
   ngOnInit(): void {
     this.anchorDate.set(this.getMonday(new Date()));
@@ -134,7 +140,9 @@ export class CalendarComponent implements OnInit {
       data: { dateTime },
     });
     ref.afterClosed().subscribe(result => {
-      if (result) this.apptSvc.add(result);
+      if (result) {
+        this.apptSvc.create(result).subscribe(() => this.loadAppointments());
+      }
     });
   }
 
@@ -147,6 +155,28 @@ export class CalendarComponent implements OnInit {
     return d.toDateString() === new Date().toDateString();
   }
 
+  getTooltip(ca: CalendarAppt): string {
+    return `${ca.patientName} – ${this.durationOf(ca.appt)} мин`;
+  }
+
+  private loadAppointments(): void {
+    let from: Date, to: Date;
+    if (this.view() === 'week') {
+      const days = this.weekDays();
+      from = days[0];
+      to = new Date(days[6]);
+      to.setHours(23, 59, 59, 999);
+    } else {
+      from = new Date(this.anchorDate());
+      from.setHours(0, 0, 0, 0);
+      to = new Date(this.anchorDate());
+      to.setHours(23, 59, 59, 999);
+    }
+    this.apptSvc.findByRange(from, to).subscribe(appts => {
+      this._appointments.set(appts);
+    });
+  }
+
   private getMonday(d: Date): Date {
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
@@ -157,10 +187,5 @@ export class CalendarComponent implements OnInit {
   }
 
   protected readonly statusColors = STATUS_COLORS;
-  readonly statusList = [
-    { key: 'scheduled', label: 'Закажана', color: '#1976d2' },
-    { key: 'completed', label: 'Завршена', color: '#388e3c' },
-    { key: 'cancelled', label: 'Откажана', color: '#757575' },
-    { key: 'no-show', label: 'Не се јавил', color: '#f57c00' },
-  ];
+  readonly statusList = APPOINTMENT_STATUSES;
 }

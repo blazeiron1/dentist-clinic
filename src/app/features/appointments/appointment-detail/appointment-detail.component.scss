@@ -198,6 +198,45 @@
   justify-content: center;
 }
 
+.int-name-display {
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.price-display {
+  font-size: 14px;
+  text-align: right;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.int-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+
+  &.draft { background: #fff3e0; color: #e65100; }
+  &.completed { background: #e8f5e9; color: #2e7d32; }
+}
+
+.draft-row {
+  border-left-color: #ff9800 !important;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-lowest) 90%, #fff3e0);
+}
+
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
 .add-int-btn { margin-top: 8px; width: 100%; }
 
 .empty-state {

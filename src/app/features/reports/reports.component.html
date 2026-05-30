@@ -12,19 +12,7 @@
       <mat-button-toggle value="today">Денес</mat-button-toggle>
       <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
       <mat-button-toggle value="month">Овој месец</mat-button-toggle>
-      <mat-button-toggle value="custom">Прилагодено</mat-button-toggle>
     </mat-button-toggle-group>
-
-    @if (range() === 'custom') {
-      <mat-form-field appearance="outline" class="date-field">
-        <mat-label>Од</mat-label>
-        <input matInput type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="date-field">
-        <mat-label>До</mat-label>
-        <input matInput type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
-      </mat-form-field>
-    }
   </div>
 
   <!-- KPI cards -->

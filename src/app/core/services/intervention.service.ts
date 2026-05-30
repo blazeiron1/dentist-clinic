@@ -1,45 +1,27 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 import { Intervention } from '../models';
-import { MOCK_INTERVENTIONS } from '../mock/mock-data';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class InterventionService {
-  private _interventions = signal<Intervention[]>(structuredClone(MOCK_INTERVENTIONS));
+  private http = inject(HttpClient);
+  private api = environment.apiUrl;
 
-  readonly interventions = this._interventions.asReadonly();
-
-  byAppointment(appointmentId: string): Intervention[] {
-    return this._interventions().filter(i => i.appointmentId === appointmentId);
+  getByAppointment(appointmentId: number): Observable<Intervention[]> {
+    return this.http.get<Intervention[]>(`${this.api}/appointments/${appointmentId}/interventions`);
   }
 
-  byPatient(patientId: string, appointmentIds: string[]): Intervention[] {
-    const set = new Set(appointmentIds);
-    return this._interventions().filter(i => set.has(i.appointmentId));
+  create(appointmentId: number, dto: { name: string; price: number; teeth?: number[]; note?: string }): Observable<Intervention> {
+    return this.http.post<Intervention>(`${this.api}/appointments/${appointmentId}/interventions`, dto);
   }
 
-  add(intervention: Omit<Intervention, 'id'>): Intervention {
-    const next: Intervention = { ...intervention, id: 'i' + Date.now() };
-    this._interventions.update(list => [...list, next]);
-    return next;
+  update(id: number, dto: { name: string; price: number; teeth?: number[]; note?: string }): Observable<Intervention> {
+    return this.http.put<Intervention>(`${this.api}/interventions/${id}`, dto);
   }
 
-  update(id: string, patch: Partial<Intervention>): void {
-    this._interventions.update(list =>
-      list.map(i => (i.id === id ? { ...i, ...patch } : i))
-    );
-  }
-
-  remove(id: string): void {
-    this._interventions.update(list => list.filter(i => i.id !== id));
-  }
-
-  addPayment(interventionId: string, amount: number): void {
-    this._interventions.update(list =>
-      list.map(i =>
-        i.id === interventionId
-          ? { ...i, paidAmount: Math.min(i.paidAmount + amount, i.price) }
-          : i
-      )
-    );
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.api}/interventions/${id}`);
   }
 }

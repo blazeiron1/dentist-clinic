@@ -10,12 +10,17 @@
               <mat-icon class="small-icon">person</mat-icon>
               {{ p.firstName }} {{ p.lastName }}
             </a>
+          } @else {
+            <span class="patient-link">
+              <mat-icon class="small-icon">person</mat-icon>
+              {{ a.patientFirstName }} {{ a.patientLastName }}
+            </span>
           }
           <span class="status-badge status-{{ a.status }}">{{ statusLabel(a.status) }}</span>
         </div>
         <div class="header-meta">
           <mat-icon class="small-icon">schedule</mat-icon>
-          {{ a.dateTime | date:'EEEE, d MMMM y – HH:mm' }} &nbsp;·&nbsp; {{ a.durationMinutes }} мин
+          {{ a.startsAt | date:'EEEE, d MMMM y – HH:mm' }} &nbsp;·&nbsp; {{ durationMinutes() }} мин
         </div>
         @if (a.notes) {
           <p class="header-notes">{{ a.notes }}</p>
@@ -57,28 +62,15 @@
           </div>
         </div>
 
-        @if (interventions().length === 0) {
+        @if (interventions().length === 0 && !draft()) {
           <p class="empty-state">Нема интервенции. Додади прва.</p>
         }
 
+        <!-- Saved interventions -->
         @for (int of interventions(); track int.id; let idx = $index) {
           <div class="int-row" [style.border-left-color]="getInterventionColor(idx)">
-            <!-- Name autocomplete -->
             <div class="int-name-cell">
-              <input class="int-name-input"
-                     [value]="int.name"
-                     (input)="onNameQuery(int.id, $any($event.target).value)"
-                     placeholder="Интервенција…"
-                     [matAutocomplete]="nameAc" />
-              <mat-autocomplete #nameAc
-                                (optionSelected)="onCatalogSelect(int.id, $event.option.value)">
-                @for (item of catalogSuggestions(); track item.id) {
-                  <mat-option [value]="item">
-                    {{ item.name }}
-                    <span class="catalog-price">{{ item.defaultPrice | number }} ден</span>
-                  </mat-option>
-                }
-              </mat-autocomplete>
+              <span class="int-name-display">{{ int.name }}</span>
             </div>
 
             <!-- Teeth button -->
@@ -90,22 +82,20 @@
 
             <!-- Price -->
             <div class="int-price-cell">
-              <input class="price-input" type="number" [value]="int.price"
-                     (change)="updatePrice(int.id, $any($event.target).value)"
-                     placeholder="0" />
+              <span class="price-display">{{ int.price | number }}</span>
               <span class="currency">ден</span>
             </div>
 
             <!-- Paid -->
             <div class="int-paid-cell">
               <span class="paid-amount">{{ int.paidAmount | number }} ден</span>
-              @if (int.price - int.paidAmount > 0) {
-                <span class="outstanding-badge">долг {{ (int.price - int.paidAmount) | number }}</span>
+              @if (int.outstanding > 0) {
+                <span class="outstanding-badge">долг {{ int.outstanding | number }}</span>
               }
             </div>
 
             <!-- Payment button -->
-            @if (int.price - int.paidAmount > 0) {
+            @if (int.outstanding > 0) {
               <button mat-icon-button color="primary" (click)="openPayment(int)"
                       matTooltip="Додади уплата">
                 <mat-icon>payments</mat-icon>
@@ -121,10 +111,62 @@
           </div>
         }
 
-        <button mat-stroked-button class="add-int-btn" (click)="addIntervention()">
-          <mat-icon>add</mat-icon>
-          Додади интервенција
-        </button>
+        <!-- Draft row -->
+        @if (draft(); as d) {
+          <div class="int-row draft-row">
+            <div class="int-name-cell">
+              <div class="name-row">
+                <input class="int-name-input"
+                       [value]="d.name"
+                       (input)="onDraftNameQuery($any($event.target).value)"
+                       placeholder="Интервенција…"
+                       [matAutocomplete]="nameAc" />
+                <span class="int-status draft">НАЦРТ</span>
+              </div>
+              <mat-autocomplete #nameAc
+                                (optionSelected)="onDraftCatalogSelect($event.option.value)">
+                @for (item of catalogSuggestions(); track item.id) {
+                  <mat-option [value]="item">
+                    {{ item.name }}
+                    <span class="catalog-price">{{ item.lastPrice | number }} ден</span>
+                  </mat-option>
+                }
+              </mat-autocomplete>
+            </div>
+
+            <!-- Teeth button -->
+            <button mat-stroked-button class="teeth-btn" (click)="openDraftToothPicker()"
+                    [matTooltip]="d.teeth.length ? 'Заби: ' + d.teeth.join(', ') : 'Одбери заби'">
+              <mat-icon>123</mat-icon>
+              @if (d.teeth.length) { {{ d.teeth.length }} } @else { — }
+            </button>
+
+            <!-- Price -->
+            <div class="int-price-cell">
+              <input class="price-input" type="number" [value]="d.price"
+                     (input)="updateDraftPrice($any($event.target).value)"
+                     placeholder="0" />
+              <span class="currency">ден</span>
+            </div>
+
+            <!-- Draft actions -->
+            <div class="draft-actions">
+              <button mat-flat-button color="primary" (click)="submitDraft()" [disabled]="submitting()">
+                <mat-icon>check</mat-icon> Зачувај
+              </button>
+              <button mat-icon-button (click)="cancelDraft()" matTooltip="Откажи" [disabled]="submitting()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (!draft()) {
+          <button mat-stroked-button class="add-int-btn" (click)="addIntervention()">
+            <mat-icon>add</mat-icon>
+            Додади интервенција
+          </button>
+        }
       </div>
 
       <!-- Tooth chart -->

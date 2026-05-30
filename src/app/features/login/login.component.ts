@@ -19,18 +19,24 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
-  email = signal('admin@dentalclinic.mk');
-  password = signal('admin');
+
+  username = signal('');
+  password = signal('');
   hidePassword = signal(true);
   error = signal('');
+  loading = signal(false);
 
   submit(): void {
-    if (!this.email() || !this.password()) {
-      this.error.set('Внесете е-пошта и лозинка');
+    if (!this.username() || !this.password()) {
+      this.error.set('Внесете корисничко име и лозинка');
       return;
     }
-    const ok = this.auth.login(this.email(), this.password());
-    if (ok) this.router.navigate(['/calendar']);
-    else this.error.set('Погрешни податоци');
+    this.loading.set(true);
+    this.error.set('');
+    this.auth.login(this.username(), this.password()).subscribe(ok => {
+      this.loading.set(false);
+      if (ok) this.router.navigate(['/calendar']);
+      else this.error.set('Погрешни податоци');
+    });
   }
 }

@@ -1,72 +1,124 @@
 export interface Patient {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
+  dateOfBirth?: string;
   phone: string;
   email?: string;
-  embg?: string;
-  dateOfBirth?: string;
   address?: string;
+  embg?: string;
   notes?: string;
   createdAt: string;
-  allergies: string[];
-  conditions: string[];
-  medications: string[];
+  updatedAt?: string;
+}
+
+export interface PatientCreate {
+  firstName: string;
+  lastName: string;
+  dateOfBirth?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  embg?: string;
+  notes?: string;
+}
+
+export interface Allergy {
+  id: number;
+  name: string;
+  severity?: string;
+  note?: string;
+}
+
+export interface Condition {
+  id: number;
+  name: string;
+  diagnosedAt?: string;
+  note?: string;
+}
+
+export interface Medication {
+  id: number;
+  name: string;
+  dosage?: string;
+  active?: boolean;
 }
 
 export interface Appointment {
-  id: string;
-  patientId: string;
-  dateTime: string;
-  durationMinutes: number;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
+  id: number;
+  patientId: number;
+  patientFirstName: string;
+  patientLastName: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
   notes?: string;
   createdAt: string;
 }
 
-export type AppointmentStatus = Appointment['status'];
+export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no-show';
 
 export interface CatalogItem {
-  id: string;
+  id: number;
   name: string;
-  defaultPrice: number;
-  category: string;
+  lastPrice: number;
+  usageCount: number;
 }
 
 export interface Intervention {
-  id: string;
-  appointmentId: string;
-  catalogItemId?: string;
+  id: number;
+  appointmentId: number;
+  catalogId?: number;
   name: string;
   teeth: number[];
   price: number;
   paidAmount: number;
-  notes?: string;
+  outstanding: number;
+  note?: string;
+  performedAt?: string;
+  // New: status indicates draft vs completed as per backend workflow
+  status: 'DRAFT' | 'COMPLETED';
 }
 
 export interface Payment {
-  id: string;
-  interventionId: string;
+  id: number;
+  interventionId: number;
   amount: number;
-  method: 'cash' | 'card' | 'transfer';
-  date: string;
+  method: PaymentMethod;
+  paidAt: string;
+  note?: string;
 }
 
-export type PaymentMethod = Payment['method'];
+export type PaymentMethod = 'cash' | 'card' | 'transfer';
 
 export interface PatientDocument {
-  id: string;
-  patientId: string;
-  name: string;
-  type: 'image' | 'pdf';
-  url: string;
-  size?: number;
+  id: number;
+  patientId: number;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  category?: string;
   uploadedAt: string;
 }
 
 export interface User {
-  id: string;
+  username: string;
   name: string;
-  email: string;
-  role: 'admin' | 'dentist' | 'receptionist';
+}
+
+export interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export interface ReportData {
+  revenue: number;
+  outstanding: number;
+  appointmentCount: number;
+  interventionCount: number;
+  revenueByType: { name: string; amount: number }[];
+  paymentMethodBreakdown: { method: string; amount: number; label: string }[];
 }

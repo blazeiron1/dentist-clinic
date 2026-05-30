@@ -72,9 +72,9 @@
           <section class="medical-section">
             <h3>Алергии</h3>
             <mat-chip-set>
-              @for (a of p.allergies; track a) {
+              @for (a of allergies(); track a.id) {
                 <mat-chip (removed)="removeAllergy(a)">
-                  {{ a }}
+                  {{ a.name }}
                   <button matChipRemove><mat-icon>cancel</mat-icon></button>
                 </mat-chip>
               }
@@ -92,9 +92,9 @@
           <section class="medical-section">
             <h3>Состојби / дијагнози</h3>
             <mat-chip-set>
-              @for (c of p.conditions; track c) {
+              @for (c of conditions(); track c.id) {
                 <mat-chip (removed)="removeCondition(c)">
-                  {{ c }}
+                  {{ c.name }}
                   <button matChipRemove><mat-icon>cancel</mat-icon></button>
                 </mat-chip>
               }
@@ -112,9 +112,9 @@
           <section class="medical-section">
             <h3>Лекови</h3>
             <mat-chip-set>
-              @for (m of p.medications; track m) {
+              @for (m of medications(); track m.id) {
                 <mat-chip (removed)="removeMedication(m)">
-                  {{ m }}
+                  {{ m.name }}
                   <button matChipRemove><mat-icon>cancel</mat-icon></button>
                 </mat-chip>
               }
@@ -138,8 +138,8 @@
           @for (a of appointments(); track a.id) {
             <div class="appt-card" [routerLink]="['/appointments', a.id]">
               <div class="appt-card-left">
-                <span class="appt-date">{{ a.dateTime | date:'d.M.y HH:mm' }}</span>
-                <span class="appt-duration">{{ a.durationMinutes }} мин</span>
+                <span class="appt-date">{{ a.startsAt | date:'d.M.y HH:mm' }}</span>
+                <span class="appt-duration">{{ durationMinutes(a) }} мин</span>
               </div>
               <div class="appt-card-right">
                 <span class="status-chip status-{{a.status}}">{{ statusLabel(a.status) }}</span>
@@ -178,7 +178,7 @@
             <table mat-table [dataSource]="allInterventions()" class="fin-table mat-elevation-z1">
               <ng-container matColumnDef="date">
                 <th mat-header-cell *matHeaderCellDef>Датум</th>
-                <td mat-cell *matCellDef="let i">—</td>
+                <td mat-cell *matCellDef="let i">{{ i.performedAt ? (i.performedAt | date:'d.M.y') : '—' }}</td>
               </ng-container>
               <ng-container matColumnDef="intervention">
                 <th mat-header-cell *matHeaderCellDef>Интервенција</th>
@@ -199,8 +199,8 @@
               <ng-container matColumnDef="outstanding">
                 <th mat-header-cell *matHeaderCellDef>Долг</th>
                 <td mat-cell *matCellDef="let i">
-                  <span [class.debt-cell]="i.price - i.paidAmount > 0">
-                    {{ (i.price - i.paidAmount) | number }} ден
+                  <span [class.debt-cell]="i.outstanding > 0">
+                    {{ i.outstanding | number }} ден
                   </span>
                 </td>
               </ng-container>

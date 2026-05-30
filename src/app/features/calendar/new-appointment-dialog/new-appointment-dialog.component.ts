@@ -8,15 +8,15 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
-import { DatePipe } from '@angular/common';
 import { PatientService } from '../../../core/services/patient.service';
 import { Patient } from '../../../core/models';
+import { DURATION_OPTIONS } from '../../../core/constants';
 
 @Component({
   selector: 'app-new-appointment-dialog',
   standalone: true,
   imports: [
-    FormsModule, DatePipe,
+    FormsModule,
     MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule,
     MatAutocompleteModule, MatSelectModule,
   ],
@@ -77,7 +77,7 @@ export class NewAppointmentDialogComponent implements OnInit {
   duration = signal(60);
   notes = signal('');
 
-  readonly durations = [15, 30, 45, 60, 90, 120];
+  readonly durations = DURATION_OPTIONS;
 
   ngOnInit(): void {
     if (this.data?.dateTime) {
@@ -87,14 +87,18 @@ export class NewAppointmentDialogComponent implements OnInit {
         `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
       );
     }
-    this.filteredPatients.set(this.patientSvc.search(''));
+    this.patientSvc.search(undefined, 0, 10).subscribe(page => {
+      this.filteredPatients.set(page.content);
+    });
   }
 
   onPatientQuery(q: string): void {
     this.patientQuery.set(q);
     if (typeof q === 'string') {
-      this.filteredPatients.set(this.patientSvc.search(q).slice(0, 10));
       this.selectedPatient.set(null);
+      this.patientSvc.search(q || undefined, 0, 10).subscribe(page => {
+        this.filteredPatients.set(page.content);
+      });
     }
   }
 
@@ -105,12 +109,13 @@ export class NewAppointmentDialogComponent implements OnInit {
   save(): void {
     const patient = this.selectedPatient();
     if (!patient) return;
+    const startsAt = new Date(this.dateTimeStr()).toISOString();
+    const endsAt = new Date(new Date(this.dateTimeStr()).getTime() + this.duration() * 60000).toISOString();
     this.dialogRef.close({
       patientId: patient.id,
-      dateTime: this.dateTimeStr(),
-      durationMinutes: this.duration(),
-      status: 'scheduled',
-      notes: this.notes(),
+      startsAt,
+      endsAt,
+      notes: this.notes() || undefined,
     });
   }
 }

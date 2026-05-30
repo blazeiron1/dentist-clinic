@@ -1,22 +1,33 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
 import { User } from '../models';
-
-const MOCK_USER: User = { id: 'u1', name: 'Dr. Stefan Petrov', email: 'admin@dentalclinic.mk', role: 'dentist' };
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private http = inject(HttpClient);
+  private api = environment.apiUrl;
   private _user = signal<User | null>(null);
 
   readonly user = this._user.asReadonly();
   readonly isLoggedIn = computed(() => this._user() !== null);
 
-  login(email: string, _password: string): boolean {
-    this._user.set({ ...MOCK_USER, email });
-    localStorage.setItem('auth_user', JSON.stringify(this._user()));
-    return true;
+  login(username: string, password: string): Observable<boolean> {
+    return this.http.post<{ message: string }>(`${this.api}/auth/login`, { username, password }).pipe(
+      tap(() => {
+        const user: User = { username, name: username };
+        this._user.set(user);
+        localStorage.setItem('auth_user', JSON.stringify(user));
+      }),
+      map(() => true),
+      catchError(() => of(false)),
+    );
   }
 
   logout(): void {
+    this.http.post(`${this.api}/auth/logout`, {}).subscribe();
     this._user.set(null);
     localStorage.removeItem('auth_user');
   }

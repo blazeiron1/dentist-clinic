@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { DecimalPipe } from '@angular/common';
+import { PAYMENT_METHODS } from '../../../core/constants';
 
 @Component({
   selector: 'app-payment-dialog',
@@ -22,9 +23,9 @@ import { DecimalPipe } from '@angular/common';
   <mat-form-field appearance="outline" class="full">
     <mat-label>Начин на плаќање</mat-label>
     <mat-select [ngModel]="method()" (ngModelChange)="method.set($event)">
-      <mat-option value="cash">Готовина</mat-option>
-      <mat-option value="card">Картичка</mat-option>
-      <mat-option value="transfer">Трансфер</mat-option>
+      @for (m of paymentMethods; track m.key) {
+        <mat-option [value]="m.key">{{ m.label }}</mat-option>
+      }
     </mat-select>
   </mat-form-field>
   <p class="hint">Максимален износ: {{ data.outstanding | number }} ден</p>
@@ -40,6 +41,7 @@ export class PaymentDialogComponent {
   data = inject(MAT_DIALOG_DATA) as { outstanding: number };
   private dialogRef = inject(MatDialogRef<PaymentDialogComponent>);
 
+  readonly paymentMethods = PAYMENT_METHODS;
   amount = signal<number>(this.data.outstanding);
   method = signal<string>('cash');
 

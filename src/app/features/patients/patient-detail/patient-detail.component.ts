@@ -4,6 +4,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,15 +19,8 @@ import { MatCardModule } from '@angular/material/card';
 import { PatientService } from '../../../core/services/patient.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { InterventionService } from '../../../core/services/intervention.service';
-import { Patient, Appointment, Intervention } from '../../../core/models';
-
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Закажана', completed: 'Завршена',
-  cancelled: 'Откажана', 'no-show': 'Не дојде',
-};
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'primary', completed: 'accent', cancelled: '', 'no-show': 'warn',
-};
+import { Patient, PatientCreate, Appointment, Intervention, Allergy, Condition, Medication } from '../../../core/models';
+import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
 
 @Component({
   selector: 'app-patient-detail',
@@ -52,22 +46,15 @@ export class PatientDetailComponent implements OnInit {
   editMode = signal(false);
   editForm = signal<Partial<Patient>>({});
 
+  allergies = signal<Allergy[]>([]);
+  conditions = signal<Condition[]>([]);
+  medications = signal<Medication[]>([]);
+  appointments = signal<Appointment[]>([]);
+  allInterventions = signal<Intervention[]>([]);
+
   newAllergy = signal('');
   newCondition = signal('');
   newMedication = signal('');
-
-  appointments = computed(() => {
-    const p = this.patient();
-    if (!p) return [];
-    return this.apptSvc.byPatient(p.id);
-  });
-
-  allInterventions = computed<Intervention[]>(() => {
-    const p = this.patient();
-    if (!p) return [];
-    const apptIds = this.appointments().map(a => a.id);
-    return this.intSvc.byPatient(p.id, apptIds);
-  });
 
   totalCharged = computed(() => this.allInterventions().reduce((s, i) => s + i.price, 0));
   totalPaid = computed(() => this.allInterventions().reduce((s, i) => s + i.paidAmount, 0));
@@ -76,13 +63,46 @@ export class PatientDetailComponent implements OnInit {
   financialCols = ['date', 'intervention', 'teeth', 'price', 'paid', 'outstanding'];
 
   statusLabel = (s: string) => STATUS_LABELS[s] ?? s;
-  statusColor = (s: string) => STATUS_COLORS[s] ?? '';
+  statusColor = (s: string) => STATUS_MAT_COLORS[s] ?? '';
+
+  durationMinutes(a: Appointment): number {
+    return Math.round((new Date(a.endsAt).getTime() - new Date(a.startsAt).getTime()) / 60000);
+  }
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id')!;
-    const p = this.patientSvc.getById(id);
-    if (!p) { this.router.navigate(['/patients']); return; }
-    this.patient.set(p);
+    const id = +this.route.snapshot.paramMap.get('id')!;
+    this.patientSvc.getById(id).subscribe({
+      next: p => {
+        this.patient.set(p);
+        this.loadMedicalData(p.id);
+        this.loadAppointments(p.id);
+      },
+      error: () => this.router.navigate(['/patients']),
+    });
+  }
+
+  private loadMedicalData(patientId: number): void {
+    this.patientSvc.getAllergies(patientId).subscribe(a => this.allergies.set(a));
+    this.patientSvc.getConditions(patientId).subscribe(c => this.conditions.set(c));
+    this.patientSvc.getMedications(patientId).subscribe(m => this.medications.set(m));
+  }
+
+  private loadAppointments(patientId: number): void {
+    const far = new Date('2000-01-01');
+    const future = new Date('2099-12-31');
+    this.apptSvc.findByRange(far, future, patientId).subscribe(appts => {
+      const sorted = appts.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+      this.appointments.set(sorted);
+      this.loadAllInterventions(sorted);
+    });
+  }
+
+  private loadAllInterventions(appts: Appointment[]): void {
+    if (appts.length === 0) { this.allInterventions.set([]); return; }
+    const reqs = appts.map(a => this.intSvc.getByAppointment(a.id));
+    forkJoin(reqs).subscribe(results => {
+      this.allInterventions.set(results.flat());
+    });
   }
 
   startEdit(): void {
@@ -93,9 +113,21 @@ export class PatientDetailComponent implements OnInit {
 
   saveEdit(): void {
     const p = this.patient()!;
-    this.patientSvc.update(p.id, this.editForm());
-    this.patient.set(this.patientSvc.getById(p.id)!);
-    this.editMode.set(false);
+    const f = this.editForm();
+    const dto: PatientCreate = {
+      firstName: f.firstName ?? p.firstName,
+      lastName: f.lastName ?? p.lastName,
+      phone: f.phone ?? p.phone,
+      email: f.email,
+      embg: f.embg,
+      dateOfBirth: f.dateOfBirth,
+      address: f.address,
+      notes: f.notes,
+    };
+    this.patientSvc.update(p.id, dto).subscribe(updated => {
+      this.patient.set(updated);
+      this.editMode.set(false);
+    });
   }
 
   cancelEdit(): void { this.editMode.set(false); }
@@ -108,49 +140,55 @@ export class PatientDetailComponent implements OnInit {
     const v = this.newAllergy().trim();
     if (!v) return;
     const p = this.patient()!;
-    this.patientSvc.update(p.id, { allergies: [...p.allergies, v] });
-    this.patient.set(this.patientSvc.getById(p.id)!);
-    this.newAllergy.set('');
+    this.patientSvc.addAllergy(p.id, { name: v }).subscribe(a => {
+      this.allergies.update(list => [...list, a]);
+      this.newAllergy.set('');
+    });
   }
 
-  removeAllergy(a: string): void {
+  removeAllergy(a: Allergy): void {
     const p = this.patient()!;
-    this.patientSvc.update(p.id, { allergies: p.allergies.filter(x => x !== a) });
-    this.patient.set(this.patientSvc.getById(p.id)!);
+    this.patientSvc.removeAllergy(p.id, a.id).subscribe(() => {
+      this.allergies.update(list => list.filter(x => x.id !== a.id));
+    });
   }
 
   addCondition(): void {
     const v = this.newCondition().trim();
     if (!v) return;
     const p = this.patient()!;
-    this.patientSvc.update(p.id, { conditions: [...p.conditions, v] });
-    this.patient.set(this.patientSvc.getById(p.id)!);
-    this.newCondition.set('');
+    this.patientSvc.addCondition(p.id, { name: v }).subscribe(c => {
+      this.conditions.update(list => [...list, c]);
+      this.newCondition.set('');
+    });
   }
 
-  removeCondition(c: string): void {
+  removeCondition(c: Condition): void {
     const p = this.patient()!;
-    this.patientSvc.update(p.id, { conditions: p.conditions.filter(x => x !== c) });
-    this.patient.set(this.patientSvc.getById(p.id)!);
+    this.patientSvc.removeCondition(p.id, c.id).subscribe(() => {
+      this.conditions.update(list => list.filter(x => x.id !== c.id));
+    });
   }
 
   addMedication(): void {
     const v = this.newMedication().trim();
     if (!v) return;
     const p = this.patient()!;
-    this.patientSvc.update(p.id, { medications: [...p.medications, v] });
-    this.patient.set(this.patientSvc.getById(p.id)!);
-    this.newMedication.set('');
+    this.patientSvc.addMedication(p.id, { name: v }).subscribe(m => {
+      this.medications.update(list => [...list, m]);
+      this.newMedication.set('');
+    });
   }
 
-  removeMedication(m: string): void {
+  removeMedication(m: Medication): void {
     const p = this.patient()!;
-    this.patientSvc.update(p.id, { medications: p.medications.filter(x => x !== m) });
-    this.patient.set(this.patientSvc.getById(p.id)!);
+    this.patientSvc.removeMedication(p.id, m.id).subscribe(() => {
+      this.medications.update(list => list.filter(x => x.id !== m.id));
+    });
   }
 
-  interventionsForAppt(apptId: string): Intervention[] {
-    return this.intSvc.byAppointment(apptId);
+  interventionsForAppt(apptId: number): Intervention[] {
+    return this.allInterventions().filter(i => i.appointmentId === apptId);
   }
 
   goBack(): void { this.router.navigate(['/patients']); }

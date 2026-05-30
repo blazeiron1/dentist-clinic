@@ -1,5 +1,5 @@
 import {
-  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy,
+  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
@@ -10,9 +10,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDividerModule } from '@angular/material/divider';
-import { ReportService, ReportData } from '../../core/services/report.service';
+import { ReportService } from '../../core/services/report.service';
+import { ReportData } from '../../core/models';
 
-type Range = 'today' | 'week' | 'month' | 'custom';
+type Range = 'today' | 'week' | 'month';
+
+const EMPTY_REPORT: ReportData = {
+  revenue: 0, outstanding: 0, appointmentCount: 0, interventionCount: 0,
+  revenueByType: [], paymentMethodBreakdown: [],
+};
 
 @Component({
   selector: 'app-reports',
@@ -30,39 +36,7 @@ export class ReportsComponent implements OnInit {
   private reportSvc = inject(ReportService);
 
   range = signal<Range>('month');
-  customFrom = signal('');
-  customTo = signal('');
-
-  private dates = computed<{ from: Date; to: Date }>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    switch (this.range()) {
-      case 'today': {
-        const to = new Date(today); to.setHours(23, 59, 59);
-        return { from: today, to };
-      }
-      case 'week': {
-        const mon = new Date(today);
-        const diff = today.getDay() === 0 ? -6 : 1 - today.getDay();
-        mon.setDate(today.getDate() + diff);
-        const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23, 59, 59);
-        return { from: mon, to: sun };
-      }
-      case 'custom': {
-        const f = this.customFrom() ? new Date(this.customFrom()) : today;
-        const t = this.customTo() ? new Date(this.customTo()) : today;
-        t.setHours(23, 59, 59);
-        return { from: f, to: t };
-      }
-      default: { // month
-        const from = new Date(today.getFullYear(), today.getMonth(), 1);
-        const to = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
-        return { from, to };
-      }
-    }
-  });
-
-  data = computed<ReportData>(() => this.reportSvc.compute(this.dates().from, this.dates().to));
+  data = signal<ReportData>(EMPTY_REPORT);
 
   maxBarValue = computed(() => {
     const vals = this.data().revenueByType.map(r => r.amount);
@@ -88,11 +62,42 @@ export class ReportsComponent implements OnInit {
     });
   });
 
+  constructor() {
+    effect(() => {
+      const r = this.range();
+      untracked(() => this.loadReport(r));
+    });
+  }
+
   ngOnInit(): void {
-    const today = new Date();
-    this.customFrom.set(today.toISOString().slice(0, 10));
-    this.customTo.set(today.toISOString().slice(0, 10));
+    this.loadReport(this.range());
   }
 
   print(): void { window.print(); }
+
+  private loadReport(range: Range): void {
+    const today = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+    switch (range) {
+      case 'today':
+        this.reportSvc.daily(dateStr).subscribe(d => this.data.set(d));
+        break;
+      case 'week': {
+        const day = today.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + diff);
+        const ws = `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())}`;
+        this.reportSvc.weekly(ws).subscribe(d => this.data.set(d));
+        break;
+      }
+      case 'month': {
+        const month = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`;
+        this.reportSvc.monthly(month).subscribe(d => this.data.set(d));
+        break;
+      }
+    }
+  }
 }
