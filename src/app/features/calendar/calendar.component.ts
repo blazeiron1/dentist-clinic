@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
 import { AppointmentService } from '../../core/services/appointment.service';
 import { Appointment } from '../../core/models';
 import { STATUS_COLORS, APPOINTMENT_STATUSES } from '../../core/constants';
@@ -27,7 +29,7 @@ interface CalendarAppt {
 @Component({
   selector: 'app-calendar',
   standalone: true,
-  imports: [DatePipe, MatButtonModule, MatIconModule, MatTooltipModule, MatChipsModule],
+  imports: [DatePipe, MatButtonModule, MatIconModule, MatTooltipModule, MatChipsModule, MatDividerModule, OverlayModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.scss',
@@ -39,10 +41,62 @@ export class CalendarComponent implements OnInit {
 
   view = signal<CalendarView>('week');
   anchorDate = signal(new Date());
+  showPicker = signal(false);
   private _appointments = signal<Appointment[]>([]);
+
+  readonly pickerPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+  ];
 
   readonly hours = Array.from({ length: 12 }, (_, i) => i + 8);
   readonly slotHeight = 60;
+
+  readonly months = [
+    { value: 0,  label: 'Јануари' },
+    { value: 1,  label: 'Февруари' },
+    { value: 2,  label: 'Март' },
+    { value: 3,  label: 'Април' },
+    { value: 4,  label: 'Мај' },
+    { value: 5,  label: 'Јуни' },
+    { value: 6,  label: 'Јули' },
+    { value: 7,  label: 'Август' },
+    { value: 8,  label: 'Септември' },
+    { value: 9,  label: 'Октомври' },
+    { value: 10, label: 'Ноември' },
+    { value: 11, label: 'Декември' },
+  ];
+
+  selectedMonth = computed(() => this.anchorDate().getMonth());
+  selectedYear  = computed(() => this.anchorDate().getFullYear());
+  dateLabel     = computed(() => `${this.months[this.selectedMonth()].label} ${this.selectedYear()}`);
+
+  togglePicker(): void {
+    this.showPicker.update(v => !v);
+  }
+
+  onOverlayOutsideClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).closest('.date-picker-trigger')) return;
+    this.showPicker.set(false);
+  }
+
+  selectMonth(month: number): void {
+    this.goToMonthYear(month, this.selectedYear());
+    this.showPicker.set(false);
+  }
+
+  onYearSelect(year: number): void {
+    this.goToMonthYear(this.selectedMonth(), year);
+  }
+
+  private goToMonthYear(month: number, year: number): void {
+    const d = new Date(year, month, 1);
+    if (this.view() === 'week') {
+      const day = d.getDay();
+      const daysToMonday = day === 1 ? 0 : day === 0 ? 1 : 8 - day;
+      d.setDate(d.getDate() + daysToMonday);
+    }
+    this.anchorDate.set(d);
+  }
 
   weekDays = computed(() => {
     const monday = this.getMonday(this.anchorDate());

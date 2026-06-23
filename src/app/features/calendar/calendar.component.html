@@ -10,13 +10,42 @@
         <mat-icon>chevron_right</mat-icon>
       </button>
 
-      @if (view() === 'week') {
-        <span class="cal-title">
-          {{ weekDays()[0] | date:'d MMM' }} – {{ weekDays()[6] | date:'d MMM y' }}
-        </span>
-      } @else {
-        <span class="cal-title">{{ anchorDate() | date:'EEEE, d MMMM y' }}</span>
-      }
+      <button class="date-picker-trigger" mat-stroked-button
+              cdkOverlayOrigin #pickerOrigin="cdkOverlayOrigin"
+              (click)="togglePicker()">
+        {{ dateLabel() }}
+        <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
+      </button>
+
+      <ng-template
+        cdkConnectedOverlay
+        [cdkConnectedOverlayOrigin]="pickerOrigin"
+        [cdkConnectedOverlayOpen]="showPicker()"
+        [cdkConnectedOverlayPositions]="pickerPositions"
+        (overlayOutsideClick)="onOverlayOutsideClick($event)">
+        <div class="date-picker-panel">
+          <div class="menu-section-title">Месец</div>
+          <div class="month-grid">
+            @for (m of months; track m.value) {
+              <button class="month-btn" [class.active]="m.value === selectedMonth()"
+                      (click)="selectMonth(m.value)">
+                {{ m.label }}
+              </button>
+            }
+          </div>
+          <mat-divider />
+          <div class="menu-section-title">Година</div>
+          <div class="year-stepper">
+            <button class="stepper-arrow" (click)="onYearSelect(selectedYear() - 1)">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span class="stepper-value">{{ selectedYear() }}</span>
+            <button class="stepper-arrow" (click)="onYearSelect(selectedYear() + 1)">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </div>
+      </ng-template>
     </div>
 
     <div class="cal-toolbar-right">

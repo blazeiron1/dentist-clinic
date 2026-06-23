@@ -29,7 +29,7 @@ import { DURATION_OPTIONS } from '../../../core/constants';
     <input matInput [ngModel]="patientQuery()"
            (ngModelChange)="onPatientQuery($event)"
            [matAutocomplete]="patientAc"
-           placeholder="Пребарај по ime / telefon" />
+           placeholder="Име и Презиме" />
     <mat-autocomplete #patientAc [displayWith]="displayPatient"
                       (optionSelected)="selectedPatient.set($event.option.value)">
       @for (p of filteredPatients(); track p.id) {
