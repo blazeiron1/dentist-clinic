@@ -107,25 +107,28 @@ export class CalendarComponent implements OnInit {
     });
   });
 
-  calendarAppts = computed<CalendarAppt[]>(() => {
+  apptsByDay = computed<CalendarAppt[][]>(() => {
     const days = this.weekDays();
-    return this._appointments().map(appt => {
+    const buckets: CalendarAppt[][] = days.map(() => []);
+    for (const appt of this._appointments()) {
       const dt = new Date(appt.startsAt);
       const endDt = new Date(appt.endsAt);
       const durationMin = (endDt.getTime() - dt.getTime()) / 60000;
       const dayIdx = days.findIndex(d => d.toDateString() === dt.toDateString());
+      if (dayIdx < 0) continue;
       const minuteFromEight = (dt.getHours() - 8) * 60 + dt.getMinutes();
       const top = (minuteFromEight / 60) * this.slotHeight;
       const height = Math.max((durationMin / 60) * this.slotHeight - 2, 20);
-      return {
+      buckets[dayIdx].push({
         appt,
         patientName: `${appt.patientFirstName} ${appt.patientLastName}`,
         color: STATUS_COLORS[appt.status] ?? '#757575',
         top: top + 'px',
         height: height + 'px',
         col: dayIdx,
-      };
-    }).filter(a => a.col >= 0);
+      });
+    }
+    return buckets;
   });
 
   dayAppts = computed<CalendarAppt[]>(() => {

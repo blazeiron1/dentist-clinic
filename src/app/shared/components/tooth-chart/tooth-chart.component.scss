@@ -8,26 +8,27 @@
   user-select: none;
 }
 
-.tooth-chart-svg {
+.tooth-svg {
   overflow: visible;
+  max-width: 100%;
+  height: auto;
 }
 
-// ── Dividers ────────────────────────────────────────────────────────────────
+// ── Divider & labels ─────────────────────────────────────────────────────────
 .divider {
   stroke: #cfd8dc;
   stroke-width: 1;
   stroke-dasharray: 4 4;
 }
 
-// ── Quadrant labels ─────────────────────────────────────────────────────────
-.quadrant-label {
-  font-size: 10px;
+.q-label {
+  font-size: 9px;
   fill: #90a4ae;
-  font-family: inherit;
   text-anchor: middle;
+  font-family: inherit;
 }
 
-// ── Tooth group ─────────────────────────────────────────────────────────────
+// ── Tooth group ──────────────────────────────────────────────────────────────
 .tooth-group {
   cursor: pointer;
   outline: none;
@@ -49,7 +50,7 @@
   }
 }
 
-// ── Tooth body ──────────────────────────────────────────────────────────────
+// ── Tooth body ───────────────────────────────────────────────────────────────
 .tooth-body {
   fill: #fff;
   stroke: #546e7a;
@@ -63,7 +64,7 @@
   stroke-width: 2;
 }
 
-// ── Selection ring ──────────────────────────────────────────────────────────
+// ── Selection ring ───────────────────────────────────────────────────────────
 .selection-ring {
   fill: none;
   stroke: #1976d2;
@@ -72,35 +73,44 @@
   opacity: 0.7;
 }
 
-// ── Groove marks (molar detail) ─────────────────────────────────────────────
+// ── Groove marks ─────────────────────────────────────────────────────────────
 .groove {
+  fill: none;
   stroke: #b0bec5;
-  stroke-width: 0.8;
+  stroke-width: 0.9;
   stroke-linecap: round;
   pointer-events: none;
 }
 
-.tooth-group.selected .groove {
+.groove-dot {
+  fill: none;
+  stroke: #b0bec5;
+  stroke-width: 0.8;
+  pointer-events: none;
+}
+
+.tooth-group.selected .groove,
+.tooth-group.selected .groove-dot {
   stroke: #90caf9;
 }
 
-// ── FDI number label ────────────────────────────────────────────────────────
+// ── FDI label ────────────────────────────────────────────────────────────────
 .tooth-label {
   font-size: 9px;
   fill: #546e7a;
   text-anchor: middle;
-  dominant-baseline: middle;
+  dominant-baseline: central;
   pointer-events: none;
   font-family: inherit;
   font-weight: 500;
 }
 
-.selected-label {
+.sel-label {
   fill: #1565c0;
   font-weight: 700;
 }
 
-// ── Read-only wrapper ────────────────────────────────────────────────────────
+// ── Read-only ────────────────────────────────────────────────────────────────
 .tooth-chart-wrapper.readonly .tooth-group {
   cursor: default;
 }

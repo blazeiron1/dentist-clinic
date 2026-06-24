@@ -1,91 +1,385 @@
 <div class="page-container">
   <div class="page-header">
     <h1 class="page-title">Извештаи</h1>
-    <button mat-stroked-button (click)="print()" class="no-print">
-      <mat-icon>print</mat-icon>Печати
-    </button>
   </div>
 
-  <!-- Range selector -->
-  <div class="range-bar no-print">
-    <mat-button-toggle-group [value]="range()" (change)="range.set($event.value)">
-      <mat-button-toggle value="today">Денес</mat-button-toggle>
-      <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
-      <mat-button-toggle value="month">Овој месец</mat-button-toggle>
-    </mat-button-toggle-group>
-  </div>
+  <mat-tab-group animationDuration="150ms" [(selectedIndex)]="selectedTab">
+    <!-- Tab 1: Financial Report -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">bar_chart</mat-icon>Финансиски извештај
+      </ng-template>
 
-  <!-- KPI cards -->
-  <div class="kpi-row">
-    <mat-card class="kpi-card">
-      <mat-icon class="kpi-icon revenue">payments</mat-icon>
-      <div class="kpi-label">Приход</div>
-      <div class="kpi-value">{{ data().revenue | number }} ден</div>
-    </mat-card>
-    <mat-card class="kpi-card">
-      <mat-icon class="kpi-icon outstanding">account_balance_wallet</mat-icon>
-      <div class="kpi-label">Неплатено</div>
-      <div class="kpi-value outstanding-val">{{ data().outstanding | number }} ден</div>
-    </mat-card>
-    <mat-card class="kpi-card">
-      <mat-icon class="kpi-icon appts">calendar_month</mat-icon>
-      <div class="kpi-label">Средби</div>
-      <div class="kpi-value">{{ data().appointmentCount }}</div>
-    </mat-card>
-    <mat-card class="kpi-card">
-      <mat-icon class="kpi-icon ints">medical_services</mat-icon>
-      <div class="kpi-label">Интервенции</div>
-      <div class="kpi-value">{{ data().interventionCount }}</div>
-    </mat-card>
-  </div>
+      <!-- Range selector -->
+      <div class="range-bar">
+        <mat-button-toggle-group [value]="range()" (change)="range.set($event.value)">
+          <mat-button-toggle value="today">Денес</mat-button-toggle>
+          <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
+          <mat-button-toggle value="month">Овој месец</mat-button-toggle>
+          <mat-button-toggle value="custom">Период</mat-button-toggle>
+        </mat-button-toggle-group>
 
-  <!-- Charts row -->
-  <div class="charts-row">
-    <!-- Bar chart: revenue by type -->
-    <mat-card class="chart-card bar-card">
-      <h3 class="chart-title">Приход по вид интервенција</h3>
-      @if (data().revenueByType.length === 0) {
-        <p class="empty-chart">Нема податоци</p>
-      } @else {
-        <div class="bar-chart">
-          @for (item of data().revenueByType; track item.name) {
-            <div class="bar-row">
-              <span class="bar-label" [title]="item.name">{{ item.name }}</span>
-              <div class="bar-track">
-                <div class="bar-fill"
-                     [style.width.%]="maxBarValue() > 0 ? (item.amount / maxBarValue()) * 100 : 0">
+        @if (range() === 'custom') {
+          <div class="custom-range">
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>Од</mat-label>
+              <input matInput type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>До</mat-label>
+              <input matInput type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+            </mat-form-field>
+            <button mat-flat-button color="primary" (click)="loadCustom()">
+              <mat-icon>search</mat-icon>Прикажи
+            </button>
+          </div>
+        }
+
+        <span class="spacer"></span>
+        <button mat-stroked-button (click)="printFinancialReport()">
+          <mat-icon>print</mat-icon>Печати
+        </button>
+        <button mat-flat-button color="primary" (click)="exportExcel()">
+          <mat-icon>download</mat-icon>Excel
+        </button>
+      </div>
+
+      <!-- KPI cards -->
+      <div class="kpi-row">
+        <mat-card class="kpi-card">
+          <mat-icon class="kpi-icon revenue">payments</mat-icon>
+          <div class="kpi-label">Приход</div>
+          <div class="kpi-value">{{ data().revenue | number }} ден</div>
+        </mat-card>
+        <mat-card class="kpi-card">
+          <mat-icon class="kpi-icon outstanding">account_balance_wallet</mat-icon>
+          <div class="kpi-label">Неплатено</div>
+          <div class="kpi-value outstanding-val">{{ data().outstanding | number }} ден</div>
+        </mat-card>
+        <mat-card class="kpi-card">
+          <mat-icon class="kpi-icon appts">calendar_month</mat-icon>
+          <div class="kpi-label">Средби</div>
+          <div class="kpi-value">{{ data().appointmentCount }}</div>
+        </mat-card>
+        <mat-card class="kpi-card">
+          <mat-icon class="kpi-icon ints">medical_services</mat-icon>
+          <div class="kpi-label">Интервенции</div>
+          <div class="kpi-value">{{ data().interventionCount }}</div>
+        </mat-card>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row">
+        <!-- Bar chart: revenue by type -->
+        <mat-card class="chart-card bar-card">
+          <h3 class="chart-title">Приход по вид интервенција</h3>
+          @if (data().revenueByType.length === 0) {
+            <p class="empty-chart">Нема податоци</p>
+          } @else {
+            <div class="bar-chart">
+              @for (item of data().revenueByType; track item.name) {
+                <div class="bar-row">
+                  <span class="bar-label" [title]="item.name">{{ item.name }}</span>
+                  <div class="bar-track">
+                    <div class="bar-fill"
+                         [style.width.%]="maxBarValue() > 0 ? (item.amount / maxBarValue()) * 100 : 0">
+                    </div>
+                  </div>
+                  <span class="bar-value">{{ item.amount | number }}</span>
                 </div>
+              }
+            </div>
+          }
+        </mat-card>
+
+        <!-- Pie chart: payment method -->
+        <mat-card class="chart-card pie-card">
+          <h3 class="chart-title">Начин на плаќање</h3>
+          @if (data().paymentMethodBreakdown.length === 0) {
+            <p class="empty-chart">Нема податоци</p>
+          } @else {
+            <div class="pie-wrapper">
+              <svg viewBox="0 0 120 120" class="pie-svg">
+                @for (s of piePaths(); track s.label) {
+                  <path [attr.d]="s.path" [attr.fill]="s.color" stroke="#fff" stroke-width="1" />
+                }
+              </svg>
+              <div class="pie-legend">
+                @for (s of piePaths(); track s.label) {
+                  <div class="pie-legend-item">
+                    <span class="pie-swatch" [style.background]="s.color"></span>
+                    <span>{{ s.label }}</span>
+                    <span class="pie-pct">{{ s.pct }}%</span>
+                  </div>
+                }
               </div>
-              <span class="bar-value">{{ item.amount | number }}</span>
+            </div>
+          }
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Tab 2: Outstanding Balances -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">account_balance_wallet</mat-icon>Неплатени
+        @if (outstandingList().length > 0) {
+          <span class="outstanding-badge">{{ outstandingList().length }}</span>
+        }
+      </ng-template>
+
+      <div class="outstanding-section">
+        <div class="outstanding-header">
+          <div class="outstanding-total">
+            <span class="outstanding-total-label">Вкупен долг:</span>
+            <span class="outstanding-total-value">{{ totalOutstanding() | number }} ден</span>
+          </div>
+          <div class="header-actions">
+            <button mat-stroked-button (click)="printOutstanding()"
+                    [disabled]="outstandingList().length === 0">
+              <mat-icon>print</mat-icon>Печати
+            </button>
+            <button mat-stroked-button (click)="exportOutstandingExcel()"
+                    [disabled]="outstandingList().length === 0">
+              <mat-icon>download</mat-icon>Excel
+            </button>
+          </div>
+        </div>
+
+        @if (outstandingList().length === 0) {
+          <div class="empty-outstanding">
+            <mat-icon class="empty-icon">check_circle</mat-icon>
+            <p>Нема неплатени пациенти</p>
+          </div>
+        } @else {
+          <table mat-table [dataSource]="outstandingList()" class="outstanding-table mat-elevation-z1">
+            <ng-container matColumnDef="patient">
+              <th mat-header-cell *matHeaderCellDef>Пациент</th>
+              <td mat-cell *matCellDef="let o">
+                <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="billed">
+              <th mat-header-cell *matHeaderCellDef>Наплатено</th>
+              <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
+            </ng-container>
+            <ng-container matColumnDef="paid">
+              <th mat-header-cell *matHeaderCellDef>Платено</th>
+              <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
+            </ng-container>
+            <ng-container matColumnDef="outstanding">
+              <th mat-header-cell *matHeaderCellDef>Долг</th>
+              <td mat-cell *matCellDef="let o">
+                <span class="debt-amount">{{ o.outstanding | number }} ден</span>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="outstandingCols"></tr>
+            <tr mat-row *matRowDef="let r; columns: outstandingCols;"></tr>
+          </table>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Tab 3: All Patients Summary -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">groups</mat-icon>Сите пациенти
+        @if (allPatientsList().length > 0) {
+          <span class="tab-badge">{{ allPatientsList().length }}</span>
+        }
+      </ng-template>
+
+      <div class="outstanding-section">
+        <div class="outstanding-header">
+          <div class="outstanding-total">
+            <span class="outstanding-total-label">Вкупно наплатено:</span>
+            <span class="all-patients-total-value">{{ allPatientsTotal().billed | number }} ден</span>
+          </div>
+          <div class="header-actions">
+            <button mat-stroked-button (click)="printAllPatients()"
+                    [disabled]="allPatientsList().length === 0">
+              <mat-icon>print</mat-icon>Печати
+            </button>
+            <button mat-stroked-button (click)="exportAllPatientsExcel()"
+                    [disabled]="allPatientsList().length === 0">
+              <mat-icon>download</mat-icon>Excel
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="kpi-row">
+          <mat-card class="kpi-card">
+            <mat-icon class="kpi-icon revenue">groups</mat-icon>
+            <div class="kpi-label">Пациенти</div>
+            <div class="kpi-value">{{ allPatientsList().length }}</div>
+          </mat-card>
+          <mat-card class="kpi-card">
+            <mat-icon class="kpi-icon appts">receipt_long</mat-icon>
+            <div class="kpi-label">Вкупно наплатено</div>
+            <div class="kpi-value">{{ allPatientsTotal().billed | number }} ден</div>
+          </mat-card>
+          <mat-card class="kpi-card">
+            <mat-icon class="kpi-icon revenue">check_circle</mat-icon>
+            <div class="kpi-label">Платено</div>
+            <div class="kpi-value">{{ allPatientsTotal().paid | number }} ден</div>
+          </mat-card>
+          <mat-card class="kpi-card">
+            <mat-icon class="kpi-icon outstanding">account_balance_wallet</mat-icon>
+            <div class="kpi-label">Долг</div>
+            <div class="kpi-value outstanding-val">{{ allPatientsTotal().outstanding | number }} ден</div>
+          </mat-card>
+        </div>
+
+        @if (allPatientsList().length === 0) {
+          <div class="empty-outstanding">
+            <mat-icon class="empty-icon">groups</mat-icon>
+            <p>Нема пациенти со интервенции</p>
+          </div>
+        } @else {
+          <table mat-table [dataSource]="allPatientsList()" class="outstanding-table mat-elevation-z1">
+            <ng-container matColumnDef="patient">
+              <th mat-header-cell *matHeaderCellDef>Пациент</th>
+              <td mat-cell *matCellDef="let o">
+                <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="billed">
+              <th mat-header-cell *matHeaderCellDef>Наплатено</th>
+              <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
+            </ng-container>
+            <ng-container matColumnDef="paid">
+              <th mat-header-cell *matHeaderCellDef>Платено</th>
+              <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
+            </ng-container>
+            <ng-container matColumnDef="outstanding">
+              <th mat-header-cell *matHeaderCellDef>Долг</th>
+              <td mat-cell *matCellDef="let o">
+                @if (o.outstanding > 0) {
+                  <span class="debt-amount">{{ o.outstanding | number }} ден</span>
+                } @else {
+                  {{ o.outstanding | number }} ден
+                }
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="allPatientsCols"></tr>
+            <tr mat-row *matRowDef="let r; columns: allPatientsCols;"></tr>
+          </table>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Tab 4: Per-Patient Report -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">person_search</mat-icon>По пациент
+      </ng-template>
+
+      <div class="patient-report-section">
+        <!-- Patient search -->
+        <div class="patient-search">
+          <mat-form-field appearance="outline" class="patient-search-field">
+            <mat-label>Пребарај пациент</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput
+                   [ngModel]="patientQuery()"
+                   (ngModelChange)="onPatientSearch($event)"
+                   placeholder="Име, презиме, телефон…" />
+          </mat-form-field>
+          @if (patientSearchResults().length > 0) {
+            <div class="patient-results">
+              @for (p of patientSearchResults(); track p.id) {
+                <button mat-button class="patient-result-item" (click)="selectPatient(p)">
+                  <mat-icon>person</mat-icon>
+                  {{ p.firstName }} {{ p.lastName }}
+                  @if (p.phone) {
+                    <span class="patient-result-phone">{{ p.phone }}</span>
+                  }
+                </button>
+              }
             </div>
           }
         </div>
-      }
-    </mat-card>
 
-    <!-- Pie chart: payment method -->
-    <mat-card class="chart-card pie-card">
-      <h3 class="chart-title">Начин на плаќање</h3>
-      @if (data().paymentMethodBreakdown.length === 0) {
-        <p class="empty-chart">Нема податоци</p>
-      } @else {
-        <div class="pie-wrapper">
-          <svg viewBox="0 0 120 120" class="pie-svg">
-            @for (s of piePaths(); track s.label) {
-              <path [attr.d]="s.path" [attr.fill]="s.color" stroke="#fff" stroke-width="1" />
-            }
-          </svg>
-          <div class="pie-legend">
-            @for (s of piePaths(); track s.label) {
-              <div class="pie-legend-item">
-                <span class="pie-swatch" [style.background]="s.color"></span>
-                <span>{{ s.label }}</span>
-                <span class="pie-pct">{{ s.pct }}%</span>
+        @if (patientReport(); as pr) {
+          <div class="patient-report-content">
+            <div class="patient-report-header">
+              <h3 class="patient-report-name">{{ pr.patientName }}</h3>
+              <div class="header-actions">
+                <button mat-stroked-button (click)="printPatientReport()">
+                  <mat-icon>print</mat-icon>Печати
+                </button>
+                <button mat-stroked-button (click)="exportPatientExcel()">
+                  <mat-icon>download</mat-icon>Excel
+                </button>
+              </div>
+            </div>
+
+            <!-- Summary cards -->
+            <div class="fin-summary">
+              <div class="fin-card">
+                <mat-icon class="fin-icon charged">receipt_long</mat-icon>
+                <span class="fin-label">Вкупно наплатено</span>
+                <span class="fin-value">{{ pr.totalBilled | number }} ден</span>
+              </div>
+              <div class="fin-card paid">
+                <mat-icon class="fin-icon paid-icon">check_circle</mat-icon>
+                <span class="fin-label">Платено</span>
+                <span class="fin-value">{{ pr.totalPaid | number }} ден</span>
+              </div>
+              <div class="fin-card outstanding" [class.has-debt]="pr.totalOutstanding > 0">
+                <mat-icon class="fin-icon debt-icon">account_balance_wallet</mat-icon>
+                <span class="fin-label">Долг</span>
+                <span class="fin-value">{{ pr.totalOutstanding | number }} ден</span>
+              </div>
+            </div>
+
+            <!-- Interventions table -->
+            @if (pr.interventions.length > 0) {
+              <table mat-table [dataSource]="pr.interventions" class="fin-table mat-elevation-z1">
+                <ng-container matColumnDef="date">
+                  <th mat-header-cell *matHeaderCellDef>Датум</th>
+                  <td mat-cell *matCellDef="let i">{{ i.performedAt ? (i.performedAt | date:'d.M.y') : '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="intervention">
+                  <th mat-header-cell *matHeaderCellDef>Интервенција</th>
+                  <td mat-cell *matCellDef="let i">{{ i.name }}</td>
+                </ng-container>
+                <ng-container matColumnDef="teeth">
+                  <th mat-header-cell *matHeaderCellDef>Заби</th>
+                  <td mat-cell *matCellDef="let i">{{ i.teeth.join(', ') || '—' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="price">
+                  <th mat-header-cell *matHeaderCellDef>Цена</th>
+                  <td mat-cell *matCellDef="let i">{{ i.price | number }} ден</td>
+                </ng-container>
+                <ng-container matColumnDef="paid">
+                  <th mat-header-cell *matHeaderCellDef>Платено</th>
+                  <td mat-cell *matCellDef="let i">{{ i.paidAmount | number }} ден</td>
+                </ng-container>
+                <ng-container matColumnDef="outstanding">
+                  <th mat-header-cell *matHeaderCellDef>Долг</th>
+                  <td mat-cell *matCellDef="let i">
+                    <span [class.debt-cell]="i.outstanding > 0">{{ i.outstanding | number }} ден</span>
+                  </td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="patientReportCols"></tr>
+                <tr mat-row *matRowDef="let r; columns: patientReportCols;"></tr>
+              </table>
+            } @else {
+              <div class="empty-outstanding">
+                <mat-icon class="empty-icon">medical_services</mat-icon>
+                <p>Нема интервенции</p>
               </div>
             }
           </div>
-        </div>
-      }
-    </mat-card>
-  </div>
+        } @else if (!patientQuery()) {
+          <div class="empty-outstanding">
+            <mat-icon class="empty-icon">person_search</mat-icon>
+            <p>Изберете пациент за да видите финансиски извештај</p>
+          </div>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>

@@ -1,5 +1,5 @@
 import {
-  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy,
+  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, ElementRef, ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -13,13 +13,18 @@ import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCardModule } from '@angular/material/card';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { PatientService } from '../../../core/services/patient.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { InterventionService } from '../../../core/services/intervention.service';
-import { Patient, PatientCreate, Appointment, Intervention, Allergy, Condition, Medication } from '../../../core/models';
+import { DocumentService } from '../../../core/services/document.service';
+import {
+  Patient, PatientCreate, Appointment, Intervention,
+  Allergy, Condition, Medication, PatientDocument,
+} from '../../../core/models';
 import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
 
 @Component({
@@ -29,7 +34,7 @@ import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
     FormsModule, DatePipe, DecimalPipe, RouterLink,
     MatTabsModule, MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatChipsModule, MatTableModule, MatTooltipModule,
-    MatBadgeModule, MatDividerModule, MatCardModule,
+    MatDividerModule, MatCardModule, MatMenuModule, MatProgressBarModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './patient-detail.component.html',
@@ -41,6 +46,9 @@ export class PatientDetailComponent implements OnInit {
   private patientSvc = inject(PatientService);
   private apptSvc = inject(AppointmentService);
   private intSvc = inject(InterventionService);
+  private docSvc = inject(DocumentService);
+
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   patient = signal<Patient | null>(null);
   editMode = signal(false);
@@ -51,6 +59,9 @@ export class PatientDetailComponent implements OnInit {
   medications = signal<Medication[]>([]);
   appointments = signal<Appointment[]>([]);
   allInterventions = signal<Intervention[]>([]);
+  documents = signal<PatientDocument[]>([]);
+  uploading = signal(false);
+  dragOver = signal(false);
 
   newAllergy = signal('');
   newCondition = signal('');
@@ -60,7 +71,18 @@ export class PatientDetailComponent implements OnInit {
   totalPaid = computed(() => this.allInterventions().reduce((s, i) => s + i.paidAmount, 0));
   totalOutstanding = computed(() => this.totalCharged() - this.totalPaid());
 
+  upcomingAppts = computed(() => {
+    const now = new Date().toISOString();
+    return this.appointments().filter(a => a.startsAt > now && a.status === 'scheduled');
+  });
+
+  pastAppts = computed(() => {
+    const now = new Date().toISOString();
+    return this.appointments().filter(a => a.startsAt <= now || a.status !== 'scheduled');
+  });
+
   financialCols = ['date', 'intervention', 'teeth', 'price', 'paid', 'outstanding'];
+  printDate = new Date();
 
   statusLabel = (s: string) => STATUS_LABELS[s] ?? s;
   statusColor = (s: string) => STATUS_MAT_COLORS[s] ?? '';
@@ -76,6 +98,7 @@ export class PatientDetailComponent implements OnInit {
         this.patient.set(p);
         this.loadMedicalData(p.id);
         this.loadAppointments(p.id);
+        this.loadDocuments(p.id);
       },
       error: () => this.router.navigate(['/patients']),
     });
@@ -105,6 +128,106 @@ export class PatientDetailComponent implements OnInit {
     });
   }
 
+  private loadDocuments(patientId: number): void {
+    this.docSvc.list(patientId).subscribe(docs => this.documents.set(docs));
+  }
+
+  printFinancials(): void {
+    const p = this.patient()!;
+    const interventions = this.allInterventions();
+    const fmt = (n: number) => n.toLocaleString('mk-MK');
+    const fmtDate = (iso?: string) => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+    };
+
+    const rows = interventions.map(i => `
+      <tr>
+        <td>${fmtDate(i.performedAt)}</td>
+        <td>${i.name}</td>
+        <td>${i.teeth.join(', ') || '—'}</td>
+        <td class="num">${fmt(i.price)}</td>
+        <td class="num">${fmt(i.paidAmount)}</td>
+        <td class="num${i.outstanding > 0 ? ' debt' : ''}">${fmt(i.outstanding)}</td>
+      </tr>
+    `).join('');
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Финансии — ${p.firstName} ${p.lastName}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #222; }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
+  .subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+  .summary { display: flex; gap: 24px; margin-bottom: 20px; }
+  .summary-item { display: flex; flex-direction: column; }
+  .summary-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+  .summary-value { font-size: 18px; font-weight: 600; }
+  .summary-value.paid { color: #2e7d32; }
+  .summary-value.debt { color: #c62828; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f5f5f5; text-align: left; padding: 8px 10px; border-bottom: 2px solid #ddd;
+       font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #555; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; }
+  .debt { color: #c62828; font-weight: 500; }
+  tfoot td { border-top: 2px solid #ddd; font-weight: 600; padding-top: 10px; }
+</style>
+</head><body>
+<h1>Финансиски извештај — ${p.firstName} ${p.lastName}</h1>
+<p class="subtitle">${p.phone || ''} ${p.email ? '· ' + p.email : ''} · Печатено: ${fmtDate(new Date().toISOString())}</p>
+
+<div class="summary">
+  <div class="summary-item">
+    <span class="summary-label">Вкупно наплатено</span>
+    <span class="summary-value">${fmt(this.totalCharged())} ден</span>
+  </div>
+  <div class="summary-item">
+    <span class="summary-label">Платено</span>
+    <span class="summary-value paid">${fmt(this.totalPaid())} ден</span>
+  </div>
+  <div class="summary-item">
+    <span class="summary-label">Долг</span>
+    <span class="summary-value${this.totalOutstanding() > 0 ? ' debt' : ''}">${fmt(this.totalOutstanding())} ден</span>
+  </div>
+</div>
+
+${interventions.length > 0 ? `
+<table>
+  <thead>
+    <tr>
+      <th>Датум</th>
+      <th>Интервенција</th>
+      <th>Заби</th>
+      <th class="num">Цена</th>
+      <th class="num">Платено</th>
+      <th class="num">Долг</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+  <tfoot>
+    <tr>
+      <td colspan="3">Вкупно</td>
+      <td class="num">${fmt(this.totalCharged())}</td>
+      <td class="num">${fmt(this.totalPaid())}</td>
+      <td class="num${this.totalOutstanding() > 0 ? ' debt' : ''}">${fmt(this.totalOutstanding())}</td>
+    </tr>
+  </tfoot>
+</table>` : '<p>Нема интервенции</p>'}
+<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}</script>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+    }
+  }
+
+  // ── Edit ────────────────────────────────────────────────────────────────────
   startEdit(): void {
     const p = this.patient()!;
     this.editForm.set({ ...p });
@@ -136,6 +259,7 @@ export class PatientDetailComponent implements OnInit {
     this.editForm.update(f => ({ ...f, [field]: value }));
   }
 
+  // ── Medical ─────────────────────────────────────────────────────────────────
   addAllergy(): void {
     const v = this.newAllergy().trim();
     if (!v) return;
@@ -187,6 +311,92 @@ export class PatientDetailComponent implements OnInit {
     });
   }
 
+  // ── Documents ───────────────────────────────────────────────────────────────
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOver.set(true);
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOver.set(false);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOver.set(false);
+    const files = event.dataTransfer?.files;
+    if (files?.length) {
+      this.uploadFiles(files);
+    }
+  }
+
+  onFileSelect(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files?.length) {
+      this.uploadFiles(input.files);
+      input.value = '';
+    }
+  }
+
+  triggerFileInput(): void {
+    this.fileInput.nativeElement.click();
+  }
+
+  private uploadFiles(files: FileList): void {
+    const p = this.patient()!;
+    this.uploading.set(true);
+    let completed = 0;
+    for (let i = 0; i < files.length; i++) {
+      this.docSvc.upload(p.id, files[i]).subscribe({
+        next: doc => {
+          this.documents.update(list => [doc, ...list]);
+          completed++;
+          if (completed === files.length) this.uploading.set(false);
+        },
+        error: () => {
+          completed++;
+          if (completed === files.length) this.uploading.set(false);
+        },
+      });
+    }
+  }
+
+  downloadDoc(doc: PatientDocument): void {
+    this.docSvc.download(doc.id).subscribe(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  deleteDoc(doc: PatientDocument): void {
+    this.docSvc.delete(doc.id).subscribe(() => {
+      this.documents.update(list => list.filter(d => d.id !== doc.id));
+    });
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  docIcon(mimeType: string): string {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.includes('pdf')) return 'picture_as_pdf';
+    if (mimeType.includes('word') || mimeType.includes('document')) return 'description';
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'table_chart';
+    return 'attach_file';
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
   interventionsForAppt(apptId: number): Intervention[] {
     return this.allInterventions().filter(i => i.appointmentId === apptId);
   }

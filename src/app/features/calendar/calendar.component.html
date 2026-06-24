@@ -68,35 +68,40 @@
   <div class="cal-scroll">
     @if (view() === 'week') {
       <div class="week-grid">
-        <!-- Day headers -->
+        <!-- Header row -->
         <div class="time-gutter-header"></div>
-        @for (day of weekDays(); track day.getTime(); let i = $index) {
+        @for (day of weekDays(); track day.getTime()) {
           <div class="day-header" [class.today]="isToday(day)">
             <span class="day-name">{{ day | date:'EEE' }}</span>
             <span class="day-num" [class.today-circle]="isToday(day)">{{ day | date:'d' }}</span>
           </div>
         }
 
-        <!-- Time rows -->
-        @for (h of hours; track h) {
-          <div class="time-label">{{ h }}:00</div>
-          @for (day of weekDays(); track day.getTime(); let di = $index) {
-            <div class="time-slot" (click)="openNewAppt(di, h)"></div>
+        <!-- Time gutter -->
+        <div class="time-gutter">
+          @for (h of hours; track h) {
+            <div class="time-label">{{ h }}:00</div>
           }
-        }
+        </div>
 
-        <!-- Appointment blocks -->
-        @for (ca of calendarAppts(); track ca.appt.id) {
-          <div class="appt-block"
-               [style.top]="ca.top"
-               [style.height]="ca.height"
-               [style.background]="ca.color + '22'"
-               [style.border-left]="'3px solid ' + ca.color"
-               [style.grid-column]="ca.col + 2"
-               (click)="openAppt(ca.appt, $event)"
-               [matTooltip]="getTooltip(ca)">
-            <span class="appt-name">{{ ca.patientName }}</span>
-            <span class="appt-time">{{ ca.appt.startsAt | date:'HH:mm' }}</span>
+        <!-- Day columns with slots and appointments -->
+        @for (day of weekDays(); track day.getTime(); let di = $index) {
+          <div class="day-column">
+            @for (h of hours; track h) {
+              <div class="time-slot" (click)="openNewAppt(di, h)"></div>
+            }
+            @for (ca of apptsByDay()[di]; track ca.appt.id) {
+              <div class="appt-block"
+                   [style.top]="ca.top"
+                   [style.height]="ca.height"
+                   [style.background]="ca.color + '22'"
+                   [style.border-left]="'3px solid ' + ca.color"
+                   (click)="openAppt(ca.appt, $event)"
+                   [matTooltip]="getTooltip(ca)">
+                <span class="appt-name">{{ ca.patientName }}</span>
+                <span class="appt-time">{{ ca.appt.startsAt | date:'HH:mm' }}</span>
+              </div>
+            }
           </div>
         }
       </div>

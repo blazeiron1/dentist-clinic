@@ -30,6 +30,7 @@ export class ShellComponent {
     { label: 'Календар', icon: 'calendar_month', route: '/calendar' },
     { label: 'Пациенти', icon: 'people', route: '/patients' },
     { label: 'Извештаи', icon: 'bar_chart', route: '/reports' },
+    { label: 'Подесувања', icon: 'settings', route: '/settings' },
   ];
 
   logout(): void {

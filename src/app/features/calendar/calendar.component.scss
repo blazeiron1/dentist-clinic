@@ -148,7 +148,7 @@ $slot-h: 60px;
 .week-grid {
   display: grid;
   grid-template-columns: $time-col repeat(7, minmax(100px, 1fr));
-  position: relative;
+  grid-template-rows: auto 1fr;
   min-width: 760px;
 }
 
@@ -192,6 +192,11 @@ $slot-h: 60px;
   }
 }
 
+.time-gutter {
+  grid-row: 2;
+  grid-column: 1;
+}
+
 .time-label {
   height: $slot-h;
   display: flex;
@@ -204,9 +209,14 @@ $slot-h: 60px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
+.day-column {
+  grid-row: 2;
+  position: relative;
+  border-left: 1px solid var(--mat-sys-outline-variant);
+}
+
 .time-slot {
   height: $slot-h;
-  border-left: 1px solid var(--mat-sys-outline-variant);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   cursor: pointer;
   box-sizing: border-box;
@@ -235,17 +245,6 @@ $slot-h: 60px;
 
   .appt-name { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .appt-time { display: block; color: #444; }
-}
-
-// Each day column needs position:relative for absolute appt blocks
-// We handle this with a wrapper — since CSS grid cells don't support position:relative natively for spanning,
-// we use a row-start approach. The appt-block uses grid-column directly + top/height via inline style.
-// We need to wrap day cells in a relative container. Since grid cells are positioned,
-// set grid-row for the appt to span all time rows (row 2 to row 2+12), and use top/height.
-// Actually, let's set each appt-block grid-row to cover all time slots and use top positioning:
-.week-grid .appt-block {
-  grid-row: 2 / span 12; // span all 12 hour rows
-  align-self: start;
 }
 
 // ── Day view ─────────────────────────────────────────────────────────────────

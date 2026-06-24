@@ -1,90 +1,70 @@
 <div class="tooth-chart-wrapper" [class.readonly]="readonly()">
-  <svg
-    [attr.viewBox]="'0 0 ' + svgW + ' ' + svgH"
-    [attr.width]="svgW"
-    [attr.height]="svgH"
-    role="group"
-    aria-label="Dental tooth chart"
-    class="tooth-chart-svg"
-  >
-    <!-- Divider lines -->
-    <!-- Vertical midline -->
-    <line x1="260" y1="20" x2="260" y2="460" class="divider" />
-    <!-- Horizontal midline -->
-    <line x1="40" y1="240" x2="480" y2="240" class="divider" />
+  <svg [attr.viewBox]="'0 0 ' + svgW + ' ' + svgH"
+       [attr.width]="svgW" [attr.height]="svgH"
+       class="tooth-svg" role="group" aria-label="Dental chart">
+
+    <!-- Midline -->
+    <line [attr.x1]="midX" y1="25" [attr.x2]="midX" y2="525" class="divider" />
 
     <!-- Quadrant labels -->
-    <text x="130" y="18" class="quadrant-label">Q1 (Upper Right)</text>
-    <text x="285" y="18" class="quadrant-label">Q2 (Upper Left)</text>
-    <text x="130" y="476" class="quadrant-label">Q4 (Lower Right)</text>
-    <text x="285" y="476" class="quadrant-label">Q3 (Lower Left)</text>
+    <text x="145" y="18" class="q-label">Горе десно (Q1)</text>
+    <text x="355" y="18" class="q-label">Горе лево (Q2)</text>
+    <text x="145" y="540" class="q-label">Долу десно (Q4)</text>
+    <text x="355" y="540" class="q-label">Долу лево (Q3)</text>
 
-    @for (id of allTeeth; track id) {
-      @let pos = positions.get(id)!;
-      @let r = toothSize(id);
-      @let selected = isSelected()(id);
-      @let iColor = interventionColor(id);
-      @let label = labelOffset(id);
+    @for (t of teeth; track t.id) {
+      @let sel = isSelected()(t.id);
+      @let iColor = interventionColor(t.id);
 
-      <g
-        [id]="'tooth-' + id"
-        class="tooth-group"
-        [class.selected]="selected"
-        [class.has-intervention]="!!iColor"
-        [class.readonly]="readonly()"
-        [attr.tabindex]="readonly() ? -1 : 0"
-        role="checkbox"
-        [attr.aria-checked]="selected"
-        [attr.aria-label]="'Tooth ' + id"
-        (click)="toggle(id)"
-        (keydown)="onKeydown($event, id)"
-        (focus)="focusedTooth.set(id)"
-      >
-        <!-- outer ring shown when selected -->
-        @if (selected) {
-          <circle
-            [attr.cx]="pos.cx"
-            [attr.cy]="pos.cy"
-            [attr.r]="r + 5"
-            class="selection-ring"
-          />
-        }
+      <g class="tooth-group"
+         [class.selected]="sel"
+         [class.has-intervention]="!!iColor"
+         [class.readonly]="readonly()"
+         [id]="'tooth-' + t.id"
+         [attr.tabindex]="readonly() ? -1 : 0"
+         role="checkbox"
+         [attr.aria-checked]="sel"
+         [attr.aria-label]="'Tooth ' + t.id"
+         (click)="toggle(t.id)"
+         (keydown)="onKeydown($event, t.id)"
+         (focus)="focusedTooth.set(t.id)">
 
-        <!-- tooth body -->
-        <circle
-          [attr.cx]="pos.cx"
-          [attr.cy]="pos.cy"
-          [attr.r]="r"
-          class="tooth-body"
-          [style.fill]="iColor ? iColor + '55' : null"
-          [style.stroke]="iColor ?? null"
-        />
+        <!-- Rotated tooth shape -->
+        <g [attr.transform]="'translate(' + t.cx + ',' + t.cy + ') rotate(' + t.rot + ')'">
+          <!-- Selection ring -->
+          @if (sel) {
+            <rect [attr.x]="-(t.w / 2 + 4)" [attr.y]="-(t.h / 2 + 4)"
+                  [attr.width]="t.w + 8" [attr.height]="t.h + 8"
+                  [attr.rx]="t.r + 2" class="selection-ring" />
+          }
 
-        <!-- inner detail lines to mimic molar grooves for larger teeth -->
-        @if (r >= 18) {
-          <line
-            [attr.x1]="pos.cx - r * 0.35"
-            [attr.y1]="pos.cy - r * 0.3"
-            [attr.x2]="pos.cx + r * 0.35"
-            [attr.y2]="pos.cy + r * 0.3"
-            class="groove"
-          />
-          <line
-            [attr.x1]="pos.cx + r * 0.35"
-            [attr.y1]="pos.cy - r * 0.3"
-            [attr.x2]="pos.cx - r * 0.35"
-            [attr.y2]="pos.cy + r * 0.3"
-            class="groove"
-          />
-        }
+          <!-- Tooth body -->
+          <rect [attr.x]="-(t.w / 2)" [attr.y]="-(t.h / 2)"
+                [attr.width]="t.w" [attr.height]="t.h"
+                [attr.rx]="t.r" class="tooth-body"
+                [style.fill]="iColor ? iColor + '44' : null"
+                [style.stroke]="iColor ?? null" />
 
-        <!-- FDI number label -->
-        <text
-          [attr.x]="pos.cx + label.dx"
-          [attr.y]="pos.cy + label.dy"
-          class="tooth-label"
-          [class.selected-label]="selected"
-        >{{ id }}</text>
+          <!-- Molar grooves (cross pattern) -->
+          @if (t.pos >= 6) {
+            <path [attr.d]="t.grooveH" class="groove" />
+            <path [attr.d]="t.grooveV" class="groove" />
+          }
+          <!-- Premolar groove (horizontal line) -->
+          @if (t.pos === 4 || t.pos === 5) {
+            <path [attr.d]="t.grooveH" class="groove" />
+          }
+          <!-- Canine dot -->
+          @if (t.pos === 3) {
+            <circle cx="0" cy="0" r="2.5" class="groove-dot" />
+          }
+        </g>
+
+        <!-- FDI number label (unrotated, outside tooth) -->
+        <text [attr.x]="t.labelX" [attr.y]="t.labelY"
+              class="tooth-label" [class.sel-label]="sel">
+          {{ t.id }}
+        </text>
       </g>
     }
   </svg>

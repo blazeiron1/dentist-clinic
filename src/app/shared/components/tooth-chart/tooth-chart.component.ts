@@ -7,19 +7,6 @@ import {
   signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-
-export interface ToothState {
-  toothNumber: number;
-  /** FDI tooth number */
-  selected: boolean;
-  interventionColor?: string; // hex color when tooth has a saved intervention
-}
-
-// FDI layout: upper row right→left then left→right, lower row right→left then left→right
-// Standard chart view (from clinician facing patient):
-//   Upper: 18 17 16 15 14 13 12 11 | 21 22 23 24 25 26 27 28
-//   Lower: 48 47 46 45 44 43 42 41 | 31 32 33 34 35 36 37 38
 
 const UPPER_RIGHT = [18, 17, 16, 15, 14, 13, 12, 11];
 const UPPER_LEFT  = [21, 22, 23, 24, 25, 26, 27, 28];
@@ -28,98 +15,98 @@ const LOWER_LEFT  = [31, 32, 33, 34, 35, 36, 37, 38];
 
 export const ALL_TEETH = [...UPPER_RIGHT, ...UPPER_LEFT, ...LOWER_RIGHT, ...LOWER_LEFT];
 
-// ── SVG arch geometry ────────────────────────────────────────────────────────
-// Each tooth is placed along an elliptical arch.
-// Upper arch: top half of ellipse.  Lower arch: bottom half.
-// We compute (cx, cy) for each tooth position around the ellipse.
+const SVG_W = 500;
+const SVG_H = 550;
 
-const SVG_W = 520;
-const SVG_H = 480;
-const CX = SVG_W / 2;   // ellipse centre x
-const CY = SVG_H / 2;   // ellipse centre y
-const RX_OUTER = 220;   // horizontal radius (outer)
-const RY_OUTER = 195;   // vertical radius (outer)
-const RX_INNER = 155;
-const RY_INNER = 130;
-const TOOTH_R  = 18;    // tooth circle radius
+const UPPER = { cx: 250, cy: 200, rx: 185, ry: 168 };
+const LOWER = { cx: 250, cy: 350, rx: 175, ry: 152 };
 
-function archPositions(
+// Tooth dimensions by FDI last digit
+const DIMS: Record<number, { w: number; h: number; r: number }> = {
+  1: { w: 15, h: 13, r: 3 },
+  2: { w: 13, h: 15, r: 3 },
+  3: { w: 14, h: 19, r: 5 },
+  4: { w: 18, h: 17, r: 4 },
+  5: { w: 20, h: 18, r: 4 },
+  6: { w: 27, h: 25, r: 5 },
+  7: { w: 26, h: 24, r: 5 },
+  8: { w: 22, h: 21, r: 5 },
+};
+
+export interface ToothPos {
+  id: number;
+  cx: number;
+  cy: number;
+  rot: number;
+  w: number;
+  h: number;
+  r: number;
+  pos: number;
+  labelX: number;
+  labelY: number;
+  grooveH: string;
+  grooveV: string;
+}
+
+function buildTeeth(
   teeth: number[],
-  startAngleDeg: number,
-  endAngleDeg: number,
-  rx: number,
-  ry: number,
-): { id: number; cx: number; cy: number }[] {
+  startDeg: number,
+  endDeg: number,
+  arch: { cx: number; cy: number; rx: number; ry: number },
+): ToothPos[] {
   const n = teeth.length;
   return teeth.map((id, i) => {
     const t = n === 1 ? 0.5 : i / (n - 1);
-    const angleDeg = startAngleDeg + t * (endAngleDeg - startAngleDeg);
-    const rad = (angleDeg * Math.PI) / 180;
-    return {
-      id,
-      cx: Math.round(CX + rx * Math.cos(rad)),
-      cy: Math.round(CY + ry * Math.sin(rad)),
-    };
+    const deg = startDeg + t * (endDeg - startDeg);
+    const rad = (deg * Math.PI) / 180;
+    const cx = Math.round(arch.cx + arch.rx * Math.cos(rad));
+    const cy = Math.round(arch.cy + arch.ry * Math.sin(rad));
+    const pos = id % 10;
+    const dim = DIMS[pos];
+
+    // Label offset: outward from arch center
+    const dx = cx - arch.cx;
+    const dy = cy - arch.cy;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const labelDist = Math.max(dim.w, dim.h) / 2 + 13;
+    const labelX = Math.round(cx + (dx / dist) * labelDist);
+    const labelY = Math.round(cy + (dy / dist) * labelDist);
+
+    // Groove paths (curved for natural look)
+    const hw = dim.w * 0.32;
+    const hh = dim.h * 0.32;
+    const grooveH = `M${-hw},${dim.h * 0.04} Q0,${-dim.h * 0.08} ${hw},${dim.h * 0.04}`;
+    const grooveV = `M${-dim.w * 0.04},${-hh} Q${dim.w * 0.06},0 ${-dim.w * 0.04},${hh}`;
+
+    return { id, cx, cy, rot: deg + 90, w: dim.w, h: dim.h, r: dim.r, pos, labelX, labelY, grooveH, grooveV };
   });
 }
 
-// Upper arch: angles go from ~200° to ~340° (top of ellipse, going left→right in screen)
-// but we want upper-right teeth (18..11) on the left side and upper-left (21..28) on the right.
-// Standard SVG: 0°=right, 90°=bottom. Upper half is 180°..360°.
-// Upper RIGHT quadrant (18→11): 200° → 270° (left side going to top)
-// Upper LEFT  quadrant (21→28): 270° → 340° (top going to right)
-// Lower RIGHT quadrant (48→41): 160° → 90° = we go 160°→90° (left side going down) → reverse
-// Lower LEFT  quadrant (31→38): 90° → 20°   → going right-downward
-
-const upperRight = archPositions(UPPER_RIGHT, 200, 267, RX_OUTER, RY_OUTER);
-const upperLeft  = archPositions(UPPER_LEFT,  273, 340, RX_OUTER, RY_OUTER);
-const lowerRight = archPositions(LOWER_RIGHT, 160,  93, RX_INNER, RY_INNER);
-const lowerLeft  = archPositions(LOWER_LEFT,   87,  20, RX_INNER, RY_INNER);
-
-const TOOTH_POSITIONS = new Map(
-  [...upperRight, ...upperLeft, ...lowerRight, ...lowerLeft].map(t => [t.id, { cx: t.cx, cy: t.cy }]),
-);
-
-// Tooth shape type: molars are bigger, incisors/canines smaller
-function toothSize(fdi: number): number {
-  const pos = fdi % 10; // last digit = position 1–8
-  if (pos === 8) return TOOTH_R + 3;       // 3rd molar
-  if (pos === 7 || pos === 6) return TOOTH_R + 2; // molars
-  if (pos === 5 || pos === 4) return TOOTH_R;    // premolars
-  if (pos === 3) return TOOTH_R - 2;       // canine
-  return TOOTH_R - 4;                      // incisors 1,2
-}
+const ALL_POSITIONS: ToothPos[] = [
+  ...buildTeeth(UPPER_RIGHT, 198, 265, UPPER),
+  ...buildTeeth(UPPER_LEFT, 275, 342, UPPER),
+  ...buildTeeth(LOWER_RIGHT, 162, 95, LOWER),
+  ...buildTeeth(LOWER_LEFT, 85, 18, LOWER),
+];
 
 @Component({
   selector: 'app-tooth-chart',
   standalone: true,
-  imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './tooth-chart.component.html',
   styleUrl: './tooth-chart.component.scss',
 })
 export class ToothChartComponent {
-  /** Teeth that have a saved intervention. Map of FDI number → hex color. */
   interventionTeeth = input<Map<number, string>>(new Map());
-
-  /** Currently selected tooth numbers (two-way bindable). */
   selectedTeeth = model<number[]>([]);
-
-  /** Emitted on every toggle when not readonly. */
   toothToggled = output<number>();
-
-  /** When true, clicks are ignored and selection ring is not shown. */
   readonly = input(false);
 
-  /** Focused tooth for keyboard navigation. */
   protected focusedTooth = signal<number | null>(null);
-
-  protected readonly allTeeth = ALL_TEETH;
-  protected readonly positions = TOOTH_POSITIONS;
+  protected readonly teeth = ALL_POSITIONS;
   protected readonly svgW = SVG_W;
   protected readonly svgH = SVG_H;
-
-  protected toothSize = toothSize;
+  protected readonly midX = SVG_W / 2;
 
   protected isSelected = computed(() => {
     const set = new Set(this.selectedTeeth());
@@ -162,13 +149,5 @@ export class ToothChartComponent {
     const nextId = ALL_TEETH[nextIdx];
     this.focusedTooth.set(nextId);
     document.getElementById(`tooth-${nextId}`)?.focus();
-  }
-
-  protected labelOffset(fdi: number): { dx: number; dy: number } {
-    const pos = this.positions.get(fdi)!;
-    const dx = pos.cx < CX ? -1 : pos.cx > CX ? 1 : 0;
-    const dy = pos.cy < CY ? -1 : pos.cy > CY ? 1 : 0;
-    const r = toothSize(fdi) + 10;
-    return { dx: dx * r, dy: dy * r + 4 };
   }
 }
