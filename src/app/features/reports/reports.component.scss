@@ -350,6 +350,31 @@
 .spacer { flex: 1; }
 
 // ── All patients ─────────────────────────────────────────────────────────────
+.ap-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.ap-filter-field { width: 220px; }
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover { color: var(--mat-sys-primary); }
+}
+
+.sort-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
 .all-patients-total-value {
   font-size: 22px;
   font-weight: 600;

@@ -207,6 +207,31 @@
           </div>
         </div>
 
+        <!-- Filters -->
+        <div class="ap-filters">
+          <mat-form-field appearance="outline" class="ap-filter-field">
+            <mat-label>Пребарај пациент</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput [ngModel]="apQuery()" (ngModelChange)="onApQueryChange($event)"
+                   placeholder="Име или презиме…" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>Од</mat-label>
+            <input matInput type="date" [ngModel]="apFrom()" (ngModelChange)="apFrom.set($event)"
+                   (change)="apApplyDateFilter()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="date-field">
+            <mat-label>До</mat-label>
+            <input matInput type="date" [ngModel]="apTo()" (ngModelChange)="apTo.set($event)"
+                   (change)="apApplyDateFilter()" />
+          </mat-form-field>
+          @if (apFrom() || apTo() || apQuery()) {
+            <button mat-icon-button (click)="apClearFilters()" matTooltip="Исчисти филтри">
+              <mat-icon>clear</mat-icon>
+            </button>
+          }
+        </div>
+
         <!-- Summary cards -->
         <div class="kpi-row">
           <mat-card class="kpi-card">
@@ -239,21 +264,52 @@
         } @else {
           <table mat-table [dataSource]="allPatientsList()" class="outstanding-table mat-elevation-z1">
             <ng-container matColumnDef="patient">
-              <th mat-header-cell *matHeaderCellDef>Пациент</th>
+              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('patient')">
+                Пациент
+                @if (apSort() === 'name') {
+                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                }
+              </th>
               <td mat-cell *matCellDef="let o">
                 <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
               </td>
             </ng-container>
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('date')">
+                Последна посета
+                @if (apSort() === 'date') {
+                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                }
+              </th>
+              <td mat-cell *matCellDef="let o">
+                {{ o.lastVisit ? (o.lastVisit | date:'d.M.y') : '—' }}
+              </td>
+            </ng-container>
             <ng-container matColumnDef="billed">
-              <th mat-header-cell *matHeaderCellDef>Наплатено</th>
+              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('billed')">
+                Наплатено
+                @if (apSort() === 'billed') {
+                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                }
+              </th>
               <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
             </ng-container>
             <ng-container matColumnDef="paid">
-              <th mat-header-cell *matHeaderCellDef>Платено</th>
+              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('paid')">
+                Платено
+                @if (apSort() === 'paid') {
+                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                }
+              </th>
               <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
             </ng-container>
             <ng-container matColumnDef="outstanding">
-              <th mat-header-cell *matHeaderCellDef>Долг</th>
+              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('outstanding')">
+                Долг
+                @if (apSort() === 'outstanding') {
+                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                }
+              </th>
               <td mat-cell *matCellDef="let o">
                 @if (o.outstanding > 0) {
                   <span class="debt-amount">{{ o.outstanding | number }} ден</span>

@@ -13,6 +13,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ReportService, OutstandingBalance, PatientFinancialReport } from '../../core/services/report.service';
 import { PatientService } from '../../core/services/patient.service';
 import { ReportData, Patient } from '../../core/models';
@@ -34,7 +35,7 @@ const EMPTY_REPORT: ReportData = {
     FormsModule, DatePipe, DecimalPipe, RouterLink,
     MatButtonModule, MatButtonToggleModule, MatIconModule,
     MatCardModule, MatFormFieldModule, MatInputModule, MatDividerModule,
-    MatTabsModule, MatTableModule,
+    MatTabsModule, MatTableModule, MatTooltipModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './reports.component.html',
@@ -55,7 +56,13 @@ export class ReportsComponent implements OnInit {
 
   // All-patients summary
   allPatientsList = signal<OutstandingBalance[]>([]);
-  allPatientsCols = ['patient', 'billed', 'paid', 'outstanding'];
+  allPatientsCols = ['patient', 'date', 'billed', 'paid', 'outstanding'];
+  apFrom = signal('');
+  apTo = signal('');
+  apQuery = signal('');
+  apSort = signal('name');
+  apDir = signal<'asc' | 'desc'>('asc');
+  private apSearchSubject = new Subject<string>();
 
   // Per-patient report
   patientQuery = signal('');
@@ -105,6 +112,11 @@ export class ReportsComponent implements OnInit {
         untracked(() => this.loadReport(r));
       }
     });
+
+    this.apSearchSubject.pipe(
+      debounceTime(400),
+      distinctUntilChanged(),
+    ).subscribe(() => this.loadAllPatients());
 
     this.searchSubject.pipe(
       debounceTime(300),
@@ -311,12 +323,44 @@ ${body}
     this.reportSvc.outstanding().subscribe(list => this.outstandingList.set(list));
   }
 
+  apToggleSort(col: string): void {
+    const field = col === 'patient' ? 'name' : col;
+    if (this.apSort() === field) {
+      this.apDir.set(this.apDir() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.apSort.set(field);
+      this.apDir.set(field === 'date' ? 'desc' : 'asc');
+    }
+    this.loadAllPatients();
+  }
+
+  onApQueryChange(value: string): void {
+    this.apQuery.set(value);
+    this.apSearchSubject.next(value);
+  }
+
+  apApplyDateFilter(): void {
+    this.loadAllPatients();
+  }
+
+  apClearFilters(): void {
+    this.apFrom.set('');
+    this.apTo.set('');
+    this.apQuery.set('');
+    this.apSort.set('name');
+    this.apDir.set('asc');
+    this.loadAllPatients();
+  }
+
   private loadAllPatients(): void {
-    this.reportSvc.patientsSummary().subscribe({
-      next: list => {
-        console.log('patients-summary response:', list);
-        this.allPatientsList.set(list);
-      },
+    const params: Record<string, string> = {};
+    if (this.apFrom()) params['from'] = this.apFrom();
+    if (this.apTo()) params['to'] = this.apTo();
+    if (this.apQuery()) params['q'] = this.apQuery();
+    if (this.apSort() !== 'name') params['sort'] = this.apSort();
+    if (this.apDir() !== 'asc') params['dir'] = this.apDir();
+    this.reportSvc.patientsSummary(params).subscribe({
+      next: list => this.allPatientsList.set(list),
       error: err => console.error('patients-summary error:', err),
     });
   }

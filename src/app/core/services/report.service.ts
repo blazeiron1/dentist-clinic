@@ -12,6 +12,7 @@ export interface OutstandingBalance {
   totalBilled: number;
   totalPaid: number;
   outstanding: number;
+  lastVisit: string | null;
 }
 
 export interface PatientFinancialReport {
@@ -59,8 +60,14 @@ export class ReportService {
     return this.http.get<OutstandingBalance[]>(`${this.api}/reports/outstanding`);
   }
 
-  patientsSummary(): Observable<OutstandingBalance[]> {
-    return this.http.get<OutstandingBalance[]>(`${this.api}/reports/patients-summary`);
+  patientsSummary(params?: { from?: string; to?: string; q?: string; sort?: string; dir?: string }): Observable<OutstandingBalance[]> {
+    const httpParams: Record<string, string> = {};
+    if (params?.from) httpParams['from'] = params.from;
+    if (params?.to) httpParams['to'] = params.to;
+    if (params?.q) httpParams['q'] = params.q;
+    if (params?.sort) httpParams['sort'] = params.sort;
+    if (params?.dir) httpParams['dir'] = params.dir;
+    return this.http.get<OutstandingBalance[]>(`${this.api}/reports/patients-summary`, { params: httpParams });
   }
 
   patientReport(patientId: number): Observable<PatientFinancialReport> {
