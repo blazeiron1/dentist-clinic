@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { PatientService } from '../../../core/services/patient.service';
 import { Patient } from '../../../core/models';
 
@@ -17,9 +19,9 @@ import { Patient } from '../../../core/models';
   selector: 'app-patient-list',
   standalone: true,
   imports: [
-    FormsModule,
+    FormsModule, DatePipe,
     MatTableModule, MatInputModule, MatFormFieldModule, MatButtonModule,
-    MatIconModule, MatTooltipModule, MatPaginatorModule,
+    MatIconModule, MatTooltipModule, MatPaginatorModule, MatProgressBarModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './patient-list.component.html',
@@ -33,10 +35,11 @@ export class PatientListComponent implements OnInit {
   page = signal(0);
   pageSize = signal(10);
 
+  loading = signal(true);
   displayedPatients = signal<Patient[]>([]);
   totalCount = signal(0);
 
-  columns = ['name', 'phone', 'embg', 'actions'];
+  columns = ['avatar', 'name', 'phone', 'embg', 'created', 'arrow'];
 
   ngOnInit(): void {
     this.loadPatients();
@@ -63,9 +66,11 @@ export class PatientListComponent implements OnInit {
   }
 
   private loadPatients(): void {
+    this.loading.set(true);
     this.patientSvc.search(this.query() || undefined, this.page(), this.pageSize()).subscribe(page => {
       this.displayedPatients.set(page.content);
       this.totalCount.set(page.totalElements);
+      this.loading.set(false);
     });
   }
 }

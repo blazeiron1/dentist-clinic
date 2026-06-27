@@ -1,5 +1,5 @@
 import {
-  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, untracked,
+  Component, inject, signal, computed, OnInit, OnDestroy, ChangeDetectionStrategy, effect, untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { DatePipe } from '@angular/common';
@@ -34,7 +34,7 @@ interface CalendarAppt {
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.scss',
 })
-export class CalendarComponent implements OnInit {
+export class CalendarComponent implements OnInit, OnDestroy {
   private apptSvc = inject(AppointmentService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -42,7 +42,10 @@ export class CalendarComponent implements OnInit {
   view = signal<CalendarView>('week');
   anchorDate = signal(new Date());
   showPicker = signal(false);
+  loading = signal(false);
+  nowMinute = signal(0);
   private _appointments = signal<Appointment[]>([]);
+  private nowTimer: any;
 
   readonly pickerPositions: ConnectedPosition[] = [
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
@@ -69,6 +72,20 @@ export class CalendarComponent implements OnInit {
   selectedMonth = computed(() => this.anchorDate().getMonth());
   selectedYear  = computed(() => this.anchorDate().getFullYear());
   dateLabel     = computed(() => `${this.months[this.selectedMonth()].label} ${this.selectedYear()}`);
+
+  dateRangeLabel = computed(() => {
+    if (this.view() === 'day') {
+      const d = this.anchorDate();
+      return `${d.getDate()} ${this.months[d.getMonth()].label} ${d.getFullYear()}`;
+    }
+    const days = this.weekDays();
+    const from = days[0];
+    const to = days[6];
+    if (from.getMonth() === to.getMonth()) {
+      return `${from.getDate()} – ${to.getDate()} ${this.months[from.getMonth()].label} ${from.getFullYear()}`;
+    }
+    return `${from.getDate()} ${this.months[from.getMonth()].label} – ${to.getDate()} ${this.months[to.getMonth()].label} ${to.getFullYear()}`;
+  });
 
   togglePicker(): void {
     this.showPicker.update(v => !v);
@@ -162,8 +179,35 @@ export class CalendarComponent implements OnInit {
     });
   }
 
+  currentTimeTop = computed(() => {
+    const now = new Date();
+    const minuteFromEight = (now.getHours() - 8) * 60 + now.getMinutes();
+    if (minuteFromEight < 0 || minuteFromEight > 12 * 60) return null;
+    return (minuteFromEight / 60) * this.slotHeight;
+  });
+
+  todayColumnIndex = computed(() => {
+    if (this.view() !== 'week') return -1;
+    return this.weekDays().findIndex(d => d.toDateString() === new Date().toDateString());
+  });
+
+  isDayViewToday = computed(() => {
+    if (this.view() !== 'day') return false;
+    return this.anchorDate().toDateString() === new Date().toDateString();
+  });
+
   ngOnInit(): void {
     this.anchorDate.set(this.getMonday(new Date()));
+    this.updateNow();
+    this.nowTimer = setInterval(() => this.updateNow(), 60000);
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.nowTimer);
+  }
+
+  private updateNow(): void {
+    this.nowMinute.set(Date.now());
   }
 
   prev(): void {
@@ -183,9 +227,13 @@ export class CalendarComponent implements OnInit {
   }
 
   setView(v: CalendarView): void {
+    const current = this.anchorDate();
     this.view.set(v);
-    if (v === 'day') this.anchorDate.set(new Date());
-    else this.anchorDate.set(this.getMonday(new Date()));
+    if (v === 'week') {
+      this.anchorDate.set(this.getMonday(current));
+    } else {
+      this.anchorDate.set(new Date(current));
+    }
   }
 
   openNewAppt(dayIndex: number, hour: number): void {
@@ -229,8 +277,10 @@ export class CalendarComponent implements OnInit {
       to = new Date(this.anchorDate());
       to.setHours(23, 59, 59, 999);
     }
+    this.loading.set(true);
     this.apptSvc.findByRange(from, to).subscribe(appts => {
       this._appointments.set(appts);
+      this.loading.set(false);
     });
   }
 

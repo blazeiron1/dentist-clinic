@@ -14,6 +14,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ReportService, OutstandingBalance, PatientFinancialReport } from '../../core/services/report.service';
 import { PatientService } from '../../core/services/patient.service';
 import { ReportData, Patient } from '../../core/models';
@@ -21,7 +22,7 @@ import * as XLSX from 'xlsx';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, filter } from 'rxjs/operators';
 
-type Range = 'today' | 'week' | 'month' | 'custom';
+type Range = 'today' | 'week' | 'month' | 'quarter' | 'custom';
 
 const EMPTY_REPORT: ReportData = {
   revenue: 0, outstanding: 0, appointmentCount: 0, interventionCount: 0,
@@ -35,7 +36,7 @@ const EMPTY_REPORT: ReportData = {
     FormsModule, DatePipe, DecimalPipe, RouterLink,
     MatButtonModule, MatButtonToggleModule, MatIconModule,
     MatCardModule, MatFormFieldModule, MatInputModule, MatDividerModule,
-    MatTabsModule, MatTableModule, MatTooltipModule,
+    MatTabsModule, MatTableModule, MatTooltipModule, MatDatepickerModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './reports.component.html',
@@ -50,16 +51,17 @@ export class ReportsComponent implements OnInit {
   outstandingList = signal<OutstandingBalance[]>([]);
   outstandingCols = ['patient', 'billed', 'paid', 'outstanding'];
 
-  customFrom = signal('');
-  customTo = signal('');
+  customFrom = signal<Date | null>(null);
+  customTo = signal<Date | null>(null);
   selectedTab = 0;
 
   // All-patients summary
   allPatientsList = signal<OutstandingBalance[]>([]);
   allPatientsCols = ['patient', 'date', 'billed', 'paid', 'outstanding'];
-  apFrom = signal('');
-  apTo = signal('');
+  apFrom = signal<Date | null>(null);
+  apTo = signal<Date | null>(null);
   apQuery = signal('');
+  apDebtFilter = signal<'all' | 'debt' | 'no-debt'>('all');
   apSort = signal('name');
   apDir = signal<'asc' | 'desc'>('asc');
   private apSearchSubject = new Subject<string>();
@@ -132,11 +134,17 @@ export class ReportsComponent implements OnInit {
     this.loadAllPatients();
   }
 
+  private formatDate(d: Date | null): string {
+    if (!d) return '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   loadCustom(): void {
     const from = this.customFrom();
     const to = this.customTo();
     if (!from || !to) return;
-    this.reportSvc.range(from, to).subscribe(d => this.data.set(d));
+    this.reportSvc.range(this.formatDate(from), this.formatDate(to)).subscribe(d => this.data.set(d));
   }
 
   // ── Print methods ─────────────────────────────────────────────────────────
@@ -198,10 +206,15 @@ export class ReportsComponent implements OnInit {
     const list = this.allPatientsList();
     const totals = this.allPatientsTotal();
     const fmt = (n: number) => n.toLocaleString('mk-MK');
+    const fmtDate = (iso: string | null) => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+    };
 
     const rows = list.map(o => {
       const debtClass = o.outstanding > 0 ? ' debt' : '';
-      return `<tr><td>${o.patientName}</td><td class="num">${fmt(o.totalBilled)}</td><td class="num">${fmt(o.totalPaid)}</td><td class="num${debtClass}">${fmt(o.outstanding)}</td></tr>`;
+      return `<tr><td>${o.patientName}</td><td>${fmtDate(o.lastVisit)}</td><td class="num">${fmt(o.totalBilled)}</td><td class="num">${fmt(o.totalPaid)}</td><td class="num${debtClass}">${fmt(o.outstanding)}</td></tr>`;
     }).join('');
 
     this.openPrintWindow(
@@ -212,9 +225,9 @@ export class ReportsComponent implements OnInit {
         <div class="summary-item"><span class="summary-label">Вкупен долг</span><span class="summary-value${totals.outstanding > 0 ? ' debt' : ''}">${fmt(totals.outstanding)} ден</span></div>
       </div>
       <table>
-        <thead><tr><th>Пациент</th><th class="num">Наплатено</th><th class="num">Платено</th><th class="num">Долг</th></tr></thead>
+        <thead><tr><th>Пациент</th><th>Последна посета</th><th class="num">Наплатено</th><th class="num">Платено</th><th class="num">Долг</th></tr></thead>
         <tbody>${rows}</tbody>
-        <tfoot><tr><td><strong>Вкупно (${list.length} пациенти)</strong></td>
+        <tfoot><tr><td colspan="2"><strong>Вкупно (${list.length} пациенти)</strong></td>
           <td class="num"><strong>${fmt(totals.billed)}</strong></td>
           <td class="num"><strong>${fmt(totals.paid)}</strong></td>
           <td class="num${totals.outstanding > 0 ? ' debt' : ''}"><strong>${fmt(totals.outstanding)}</strong></td>
@@ -344,19 +357,28 @@ ${body}
   }
 
   apClearFilters(): void {
-    this.apFrom.set('');
-    this.apTo.set('');
+    this.apFrom.set(null);
+    this.apTo.set(null);
     this.apQuery.set('');
+    this.apDebtFilter.set('all');
     this.apSort.set('name');
     this.apDir.set('asc');
     this.loadAllPatients();
   }
 
+  onDebtFilterChange(value: string): void {
+    this.apDebtFilter.set(value as 'all' | 'debt' | 'no-debt');
+    this.loadAllPatients();
+  }
+
   private loadAllPatients(): void {
     const params: Record<string, string> = {};
-    if (this.apFrom()) params['from'] = this.apFrom();
-    if (this.apTo()) params['to'] = this.apTo();
+    const fromStr = this.formatDate(this.apFrom());
+    const toStr = this.formatDate(this.apTo());
+    if (fromStr) params['from'] = fromStr;
+    if (toStr) params['to'] = toStr;
     if (this.apQuery()) params['q'] = this.apQuery();
+    if (this.apDebtFilter() !== 'all') params['debt'] = this.apDebtFilter();
     if (this.apSort() !== 'name') params['sort'] = this.apSort();
     if (this.apDir() !== 'asc') params['dir'] = this.apDir();
     this.reportSvc.patientsSummary(params).subscribe({
@@ -420,8 +442,8 @@ ${body}
     const list = this.allPatientsList();
     if (list.length === 0) return;
     const data = [
-      ['Пациент', 'Наплатено', 'Платено', 'Долг'],
-      ...list.map(o => [o.patientName, o.totalBilled, o.totalPaid, o.outstanding]),
+      ['Пациент', 'Последна посета', 'Наплатено', 'Платено', 'Долг'],
+      ...list.map(o => [o.patientName, o.lastVisit ?? '—', o.totalBilled, o.totalPaid, o.outstanding]),
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -468,7 +490,8 @@ ${body}
       case 'today': return 'денес';
       case 'week': return 'недела';
       case 'month': return 'месец';
-      case 'custom': return `${this.customFrom()}_${this.customTo()}`;
+      case 'quarter': return 'квартал';
+      case 'custom': return `${this.formatDate(this.customFrom())}_${this.formatDate(this.customTo())}`;
     }
   }
 
@@ -493,6 +516,15 @@ ${body}
       case 'month': {
         const month = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`;
         this.reportSvc.monthly(month).subscribe(d => this.data.set(d));
+        break;
+      }
+      case 'quarter': {
+        const qMonth = Math.floor(today.getMonth() / 3) * 3;
+        const qStart = new Date(today.getFullYear(), qMonth, 1);
+        const qEnd = new Date(today.getFullYear(), qMonth + 3, 0);
+        const from = `${qStart.getFullYear()}-${pad(qStart.getMonth() + 1)}-${pad(qStart.getDate())}`;
+        const to = `${qEnd.getFullYear()}-${pad(qEnd.getMonth() + 1)}-${pad(qEnd.getDate())}`;
+        this.reportSvc.range(from, to).subscribe(d => this.data.set(d));
         break;
       }
       case 'custom':

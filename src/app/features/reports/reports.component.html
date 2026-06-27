@@ -16,6 +16,7 @@
           <mat-button-toggle value="today">Денес</mat-button-toggle>
           <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
           <mat-button-toggle value="month">Овој месец</mat-button-toggle>
+          <mat-button-toggle value="quarter">Квартал</mat-button-toggle>
           <mat-button-toggle value="custom">Период</mat-button-toggle>
         </mat-button-toggle-group>
 
@@ -23,13 +24,18 @@
           <div class="custom-range">
             <mat-form-field appearance="outline" class="date-field">
               <mat-label>Од</mat-label>
-              <input matInput type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+              <input matInput [matDatepicker]="customFromPicker" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+              <mat-datepicker-toggle matIconSuffix [for]="customFromPicker" />
+              <mat-datepicker #customFromPicker />
             </mat-form-field>
             <mat-form-field appearance="outline" class="date-field">
               <mat-label>До</mat-label>
-              <input matInput type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+              <input matInput [matDatepicker]="customToPicker" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+              <mat-datepicker-toggle matIconSuffix [for]="customToPicker" />
+              <mat-datepicker #customToPicker />
             </mat-form-field>
-            <button mat-flat-button color="primary" (click)="loadCustom()">
+            <button mat-flat-button color="primary" (click)="loadCustom()"
+                    [disabled]="!customFrom() || !customTo()">
               <mat-icon>search</mat-icon>Прикажи
             </button>
           </div>
@@ -215,17 +221,27 @@
             <input matInput [ngModel]="apQuery()" (ngModelChange)="onApQueryChange($event)"
                    placeholder="Име или презиме…" />
           </mat-form-field>
+          <mat-button-toggle-group [value]="apDebtFilter()" (change)="onDebtFilterChange($event.value)"
+                                   class="debt-filter">
+            <mat-button-toggle value="all">Сите</mat-button-toggle>
+            <mat-button-toggle value="debt">Со долг</mat-button-toggle>
+            <mat-button-toggle value="no-debt">Без долг</mat-button-toggle>
+          </mat-button-toggle-group>
           <mat-form-field appearance="outline" class="date-field">
             <mat-label>Од</mat-label>
-            <input matInput type="date" [ngModel]="apFrom()" (ngModelChange)="apFrom.set($event)"
-                   (change)="apApplyDateFilter()" />
+            <input matInput [matDatepicker]="apFromPicker" [ngModel]="apFrom()"
+                   (ngModelChange)="apFrom.set($event)" (dateChange)="apApplyDateFilter()" />
+            <mat-datepicker-toggle matIconSuffix [for]="apFromPicker" />
+            <mat-datepicker #apFromPicker />
           </mat-form-field>
           <mat-form-field appearance="outline" class="date-field">
             <mat-label>До</mat-label>
-            <input matInput type="date" [ngModel]="apTo()" (ngModelChange)="apTo.set($event)"
-                   (change)="apApplyDateFilter()" />
+            <input matInput [matDatepicker]="apToPicker" [ngModel]="apTo()"
+                   (ngModelChange)="apTo.set($event)" (dateChange)="apApplyDateFilter()" />
+            <mat-datepicker-toggle matIconSuffix [for]="apToPicker" />
+            <mat-datepicker #apToPicker />
           </mat-form-field>
-          @if (apFrom() || apTo() || apQuery()) {
+          @if (apFrom() !== null || apTo() !== null || apQuery() || apDebtFilter() !== 'all') {
             <button mat-icon-button (click)="apClearFilters()" matTooltip="Исчисти филтри">
               <mat-icon>clear</mat-icon>
             </button>

@@ -1,3 +1,9 @@
+@if (loading()) {
+  <div class="loading-container">
+    <mat-icon class="spin loading-icon">sync</mat-icon>
+    <span>Се вчитува...</span>
+  </div>
+}
 @if (appointment(); as a) {
   <div class="page-container">
     <!-- Header -->
@@ -113,6 +119,10 @@
 
         <!-- Draft row -->
         @if (draft(); as d) {
+          <div class="draft-banner">
+            <mat-icon>warning_amber</mat-icon>
+            Имате незачувана интервенција
+          </div>
           <div class="int-row draft-row">
             <div class="int-name-cell">
               <div class="name-row">
@@ -134,14 +144,7 @@
               </mat-autocomplete>
             </div>
 
-            <!-- Teeth button -->
-            <button mat-stroked-button class="teeth-btn" (click)="openDraftToothPicker()"
-                    [matTooltip]="d.teeth.length ? 'Заби: ' + d.teeth.join(', ') : 'Одбери заби'">
-              <mat-icon>123</mat-icon>
-              @if (d.teeth.length) { {{ d.teeth.length }} } @else { — }
-            </button>
-
-            <!-- Price -->
+            <!-- Price (moved before teeth) -->
             <div class="int-price-cell">
               <input class="price-input" type="number" [value]="d.price"
                      (input)="updateDraftPrice($any($event.target).value)"
@@ -149,10 +152,22 @@
               <span class="currency">ден</span>
             </div>
 
+            <!-- Teeth button -->
+            <button mat-stroked-button class="teeth-btn" (click)="openDraftToothPicker()"
+                    [matTooltip]="d.teeth.length ? 'Заби: ' + d.teeth.join(', ') : 'Одбери заби'">
+              <mat-icon>123</mat-icon>
+              @if (d.teeth.length) { {{ d.teeth.length }} } @else { — }
+            </button>
+
             <!-- Draft actions -->
             <div class="draft-actions">
               <button mat-flat-button color="primary" (click)="submitDraft()" [disabled]="submitting()">
-                <mat-icon>check</mat-icon> Зачувај
+                @if (submitting()) {
+                  <mat-icon class="spin">sync</mat-icon>
+                } @else {
+                  <mat-icon>check</mat-icon>
+                }
+                Зачувај
               </button>
               <button mat-icon-button (click)="cancelDraft()" matTooltip="Откажи" [disabled]="submitting()">
                 <mat-icon>close</mat-icon>

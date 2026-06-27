@@ -60,11 +60,12 @@ export class ReportService {
     return this.http.get<OutstandingBalance[]>(`${this.api}/reports/outstanding`);
   }
 
-  patientsSummary(params?: { from?: string; to?: string; q?: string; sort?: string; dir?: string }): Observable<OutstandingBalance[]> {
+  patientsSummary(params?: { from?: string; to?: string; q?: string; debt?: string; sort?: string; dir?: string }): Observable<OutstandingBalance[]> {
     const httpParams: Record<string, string> = {};
     if (params?.from) httpParams['from'] = params.from;
     if (params?.to) httpParams['to'] = params.to;
     if (params?.q) httpParams['q'] = params.q;
+    if (params?.debt) httpParams['debt'] = params.debt;
     if (params?.sort) httpParams['sort'] = params.sort;
     if (params?.dir) httpParams['dir'] = params.dir;
     return this.http.get<OutstandingBalance[]>(`${this.api}/reports/patients-summary`, { params: httpParams });

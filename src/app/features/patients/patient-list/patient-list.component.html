@@ -1,6 +1,11 @@
 <div class="page-container">
   <div class="page-header">
-    <h1 class="page-title">Пациенти</h1>
+    <div class="header-left">
+      <h1 class="page-title">Пациенти</h1>
+      @if (!loading()) {
+        <span class="patient-count">{{ totalCount() }}</span>
+      }
+    </div>
     <button mat-flat-button color="primary" (click)="newPatient()">
       <mat-icon>person_add</mat-icon>
       Нов пациент
@@ -8,57 +13,100 @@
   </div>
 
   <mat-form-field appearance="outline" class="search-field">
-    <mat-label>Пребарај</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <mat-label>Пребарај по име, телефон или ЕМБГ</mat-label>
     <input matInput [ngModel]="query()" (ngModelChange)="onSearch($event)"
            placeholder="Ime, telefon ili EMBG…" />
-    <mat-icon matSuffix>search</mat-icon>
+    @if (query()) {
+      <button matSuffix mat-icon-button (click)="onSearch('')" matTooltip="Исчисти">
+        <mat-icon>close</mat-icon>
+      </button>
+    }
   </mat-form-field>
 
-  <div class="table-wrapper mat-elevation-z1">
-    <table mat-table [dataSource]="displayedPatients()" class="patients-table">
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Пациент</th>
-        <td mat-cell *matCellDef="let p">
-          <div class="patient-name">{{ p.firstName }} {{ p.lastName }}</div>
-        </td>
-      </ng-container>
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
+  }
 
-      <ng-container matColumnDef="phone">
-        <th mat-header-cell *matHeaderCellDef>Телефон</th>
-        <td mat-cell *matCellDef="let p">{{ p.phone }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="embg">
-        <th mat-header-cell *matHeaderCellDef>ЕМБГ</th>
-        <td mat-cell *matCellDef="let p">{{ p.embg || '—' }}</td>
-      </ng-container>
-
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let p">
-          <button mat-icon-button (click)="goToPatient(p)" matTooltip="Отвори">
-            <mat-icon>arrow_forward</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-
-      <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns;"
-          class="patient-row" (click)="goToPatient(row)"></tr>
-
-      @if (totalCount() === 0) {
-        <tr class="mat-mdc-no-data-row">
-          <td [attr.colspan]="columns.length" class="no-data">Нема пациенти</td>
-        </tr>
+  @if (totalCount() === 0 && !loading()) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">person_off</mat-icon>
+      @if (query()) {
+        <h3>Нема резултати</h3>
+        <p>Не е пронајден пациент за „{{ query() }}"</p>
+        <button mat-stroked-button (click)="onSearch('')">
+          <mat-icon>clear</mat-icon>Исчисти пребарување
+        </button>
+      } @else {
+        <h3>Нема пациенти</h3>
+        <p>Додадете го вашиот прв пациент</p>
+        <button mat-flat-button color="primary" (click)="newPatient()">
+          <mat-icon>person_add</mat-icon>Додади пациент
+        </button>
       }
-    </table>
+    </div>
+  } @else {
+    <div class="table-wrapper mat-elevation-z1">
+      <table mat-table [dataSource]="displayedPatients()" class="patients-table">
 
-    <mat-paginator
-      [length]="totalCount()"
-      [pageSize]="pageSize()"
-      [pageSizeOptions]="[10, 25, 50]"
-      (page)="onPage($event)"
-      showFirstLastButtons>
-    </mat-paginator>
-  </div>
+        <ng-container matColumnDef="avatar">
+          <th mat-header-cell *matHeaderCellDef class="avatar-col"></th>
+          <td mat-cell *matCellDef="let p" class="avatar-col">
+            <div class="row-avatar">{{ p.firstName[0] }}{{ p.lastName[0] }}</div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Пациент</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="patient-name">{{ p.firstName }} {{ p.lastName }}</div>
+            @if (p.email) {
+              <div class="patient-email">{{ p.email }}</div>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>Телефон</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="cell-with-icon">
+              <mat-icon class="cell-icon">phone</mat-icon>
+              {{ p.phone }}
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="embg">
+          <th mat-header-cell *matHeaderCellDef>ЕМБГ</th>
+          <td mat-cell *matCellDef="let p">{{ p.embg || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="created">
+          <th mat-header-cell *matHeaderCellDef>Додаден</th>
+          <td mat-cell *matCellDef="let p" class="date-cell">
+            {{ p.createdAt | date:'d.M.y' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="arrow">
+          <th mat-header-cell *matHeaderCellDef class="arrow-col"></th>
+          <td mat-cell *matCellDef="let p" class="arrow-col">
+            <mat-icon class="row-arrow">chevron_right</mat-icon>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns;"
+            class="patient-row" (click)="goToPatient(row)"></tr>
+      </table>
+
+      <mat-paginator
+        [length]="totalCount()"
+        [pageSize]="pageSize()"
+        [pageSizeOptions]="[10, 25, 50]"
+        (page)="onPage($event)"
+        showFirstLastButtons>
+      </mat-paginator>
+    </div>
+  }
 </div>

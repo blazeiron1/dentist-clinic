@@ -61,7 +61,7 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
                 <mat-icon class="backup-icon">archive</mat-icon>
                 <div class="backup-info">
                   <span class="backup-name">{{ b.filename }}</span>
-                  <span class="backup-meta">{{ formatSize(b.sizeBytes) }} &middot; {{ b.createdAt | date:'dd.MM.yyyy HH:mm' }}</span>
+                  <span class="backup-meta">{{ formatSize(b.sizeBytes) }} &middot; {{ b.createdAt | date:'d.M.y HH:mm' }}</span>
                 </div>
                 <button mat-icon-button (click)="downloadBackup(b)" matTooltip="Преземи">
                   <mat-icon>download</mat-icon>

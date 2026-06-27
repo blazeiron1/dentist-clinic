@@ -4,7 +4,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { forkJoin, finalize } from 'rxjs';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,6 +17,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { PatientService } from '../../../core/services/patient.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { InterventionService } from '../../../core/services/intervention.service';
@@ -34,7 +35,7 @@ import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
     FormsModule, DatePipe, DecimalPipe, RouterLink,
     MatTabsModule, MatButtonModule, MatIconModule, MatFormFieldModule,
     MatInputModule, MatChipsModule, MatTableModule, MatTooltipModule,
-    MatDividerModule, MatCardModule, MatMenuModule, MatProgressBarModule,
+    MatDividerModule, MatCardModule, MatMenuModule, MatProgressBarModule, MatDatepickerModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './patient-detail.component.html',
@@ -53,6 +54,9 @@ export class PatientDetailComponent implements OnInit {
   patient = signal<Patient | null>(null);
   editMode = signal(false);
   editForm = signal<Partial<Patient>>({});
+  editDob = signal<Date | null>(null);
+  today = new Date();
+  editErrors = signal<Record<string, string>>({});
 
   allergies = signal<Allergy[]>([]);
   conditions = signal<Condition[]>([]);
@@ -231,10 +235,33 @@ ${interventions.length > 0 ? `
   startEdit(): void {
     const p = this.patient()!;
     this.editForm.set({ ...p });
+    this.editDob.set(p.dateOfBirth ? new Date(p.dateOfBirth) : null);
+    this.editErrors.set({});
     this.editMode.set(true);
   }
 
+  private validateEdit(): boolean {
+    const f = this.editForm();
+    const errors: Record<string, string> = {};
+    if (!f.firstName?.trim()) errors['firstName'] = 'Името е задолжително';
+    else if (f.firstName.trim().length < 2) errors['firstName'] = 'Минимум 2 карактери';
+    if (!f.lastName?.trim()) errors['lastName'] = 'Презимето е задолжително';
+    else if (f.lastName.trim().length < 2) errors['lastName'] = 'Минимум 2 карактери';
+    if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) errors['email'] = 'Невалидна е-пошта';
+    if (f.embg && !/^\d{13}$/.test(f.embg)) errors['embg'] = 'ЕМБГ мора да содржи точно 13 цифри';
+    if (f.phone && !/^[0-9+\-\s()]{6,20}$/.test(f.phone)) errors['phone'] = 'Невалиден формат на телефон';
+    this.editErrors.set(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  private formatDate(d: Date | null): string | undefined {
+    if (!d) return undefined;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   saveEdit(): void {
+    if (!this.validateEdit()) return;
     const p = this.patient()!;
     const f = this.editForm();
     const dto: PatientCreate = {
@@ -243,7 +270,7 @@ ${interventions.length > 0 ? `
       phone: f.phone ?? p.phone,
       email: f.email,
       embg: f.embg,
-      dateOfBirth: f.dateOfBirth,
+      dateOfBirth: this.formatDate(this.editDob()),
       address: f.address,
       notes: f.notes,
     };
@@ -259,10 +286,15 @@ ${interventions.length > 0 ? `
     this.editForm.update(f => ({ ...f, [field]: value }));
   }
 
+  updateDob(value: Date | null): void {
+    this.editDob.set(value);
+  }
+
   // ── Medical ─────────────────────────────────────────────────────────────────
   addAllergy(): void {
     const v = this.newAllergy().trim();
     if (!v) return;
+    if (this.allergies().some(a => a.name.toLowerCase() === v.toLowerCase())) return;
     const p = this.patient()!;
     this.patientSvc.addAllergy(p.id, { name: v }).subscribe(a => {
       this.allergies.update(list => [...list, a]);
@@ -280,6 +312,7 @@ ${interventions.length > 0 ? `
   addCondition(): void {
     const v = this.newCondition().trim();
     if (!v) return;
+    if (this.conditions().some(c => c.name.toLowerCase() === v.toLowerCase())) return;
     const p = this.patient()!;
     this.patientSvc.addCondition(p.id, { name: v }).subscribe(c => {
       this.conditions.update(list => [...list, c]);
@@ -297,6 +330,7 @@ ${interventions.length > 0 ? `
   addMedication(): void {
     const v = this.newMedication().trim();
     if (!v) return;
+    if (this.medications().some(m => m.name.toLowerCase() === v.toLowerCase())) return;
     const p = this.patient()!;
     this.patientSvc.addMedication(p.id, { name: v }).subscribe(m => {
       this.medications.update(list => [...list, m]);
@@ -349,20 +383,14 @@ ${interventions.length > 0 ? `
   private uploadFiles(files: FileList): void {
     const p = this.patient()!;
     this.uploading.set(true);
-    let completed = 0;
-    for (let i = 0; i < files.length; i++) {
-      this.docSvc.upload(p.id, files[i]).subscribe({
-        next: doc => {
-          this.documents.update(list => [doc, ...list]);
-          completed++;
-          if (completed === files.length) this.uploading.set(false);
-        },
-        error: () => {
-          completed++;
-          if (completed === files.length) this.uploading.set(false);
-        },
-      });
-    }
+    const uploads = Array.from(files).map(file => this.docSvc.upload(p.id, file));
+    forkJoin(uploads).pipe(
+      finalize(() => this.uploading.set(false)),
+    ).subscribe({
+      next: docs => {
+        this.documents.update(list => [...docs, ...list]);
+      },
+    });
   }
 
   downloadDoc(doc: PatientDocument): void {

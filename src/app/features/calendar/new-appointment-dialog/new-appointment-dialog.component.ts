@@ -1,5 +1,5 @@
 import {
-  Component, inject, signal, OnInit, ChangeDetectionStrategy,
+  Component, inject, signal, computed, OnInit, ChangeDetectionStrategy,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -29,19 +29,29 @@ import { DURATION_OPTIONS } from '../../../core/constants';
     <input matInput [ngModel]="patientQuery()"
            (ngModelChange)="onPatientQuery($event)"
            [matAutocomplete]="patientAc"
-           placeholder="Име и Презиме" />
+           placeholder="Име и Презиме"
+           required />
     <mat-autocomplete #patientAc [displayWith]="displayPatient"
                       (optionSelected)="selectedPatient.set($event.option.value)">
       @for (p of filteredPatients(); track p.id) {
         <mat-option [value]="p">{{ p.firstName }} {{ p.lastName }} — {{ p.phone }}</mat-option>
       }
     </mat-autocomplete>
+    @if (submitted() && !selectedPatient()) {
+      <mat-error>Одберете пациент од листата</mat-error>
+    } @else if (!selectedPatient() && patientQuery()) {
+      <mat-hint class="warn-hint">Одберете пациент од листата</mat-hint>
+    }
   </mat-form-field>
 
   <mat-form-field appearance="outline" class="full">
     <mat-label>Датум и час</mat-label>
     <input matInput type="datetime-local" [ngModel]="dateTimeStr()"
-           (ngModelChange)="dateTimeStr.set($event)" />
+           (ngModelChange)="dateTimeStr.set($event)"
+           required />
+    @if (submitted() && !dateTimeStr()) {
+      <mat-error>Датумот и часот се задолжителни</mat-error>
+    }
   </mat-form-field>
 
   <mat-form-field appearance="outline" class="full">
@@ -51,6 +61,9 @@ import { DURATION_OPTIONS } from '../../../core/constants';
         <mat-option [value]="d">{{ d }} мин</mat-option>
       }
     </mat-select>
+    @if (endTimeDisplay()) {
+      <mat-hint>Завршува во {{ endTimeDisplay() }}</mat-hint>
+    }
   </mat-form-field>
 
   <mat-form-field appearance="outline" class="full">
@@ -60,10 +73,12 @@ import { DURATION_OPTIONS } from '../../../core/constants';
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button mat-dialog-close>Откажи</button>
-  <button mat-flat-button color="primary" (click)="save()" [disabled]="!selectedPatient()">Зачувај</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!selectedPatient() || !dateTimeStr()">Зачувај</button>
 </mat-dialog-actions>
   `,
-  styles: ['.full { width: 100%; } mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px !important; }'],
+  styles: [`.full { width: 100%; }
+    mat-dialog-content { display: flex; flex-direction: column; gap: 4px; padding-top: 8px !important; }
+    .warn-hint { color: #e65100; }`],
 })
 export class NewAppointmentDialogComponent implements OnInit {
   private patientSvc = inject(PatientService);
@@ -76,8 +91,19 @@ export class NewAppointmentDialogComponent implements OnInit {
   dateTimeStr = signal('');
   duration = signal(60);
   notes = signal('');
+  submitted = signal(false);
 
   readonly durations = DURATION_OPTIONS;
+
+  endTimeDisplay = computed(() => {
+    const dt = this.dateTimeStr();
+    const dur = this.duration();
+    if (!dt) return '';
+    const end = new Date(new Date(dt).getTime() + dur * 60000);
+    if (isNaN(end.getTime())) return '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  });
 
   ngOnInit(): void {
     if (this.data?.dateTime) {
@@ -107,8 +133,9 @@ export class NewAppointmentDialogComponent implements OnInit {
   }
 
   save(): void {
+    this.submitted.set(true);
     const patient = this.selectedPatient();
-    if (!patient) return;
+    if (!patient || !this.dateTimeStr()) return;
     const startsAt = new Date(this.dateTimeStr()).toISOString();
     const endsAt = new Date(new Date(this.dateTimeStr()).getTime() + this.duration() * 60000).toISOString();
     this.dialogRef.close({

@@ -110,27 +110,44 @@
               <div class="form-grid">
                 <mat-form-field appearance="outline">
                   <mat-label>Име</mat-label>
-                  <input matInput [ngModel]="editForm().firstName" (ngModelChange)="updateForm('firstName', $event)" />
+                  <input matInput [ngModel]="editForm().firstName" (ngModelChange)="updateForm('firstName', $event)" required />
+                  @if (editErrors()['firstName']) {
+                    <mat-error>{{ editErrors()['firstName'] }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Презиме</mat-label>
-                  <input matInput [ngModel]="editForm().lastName" (ngModelChange)="updateForm('lastName', $event)" />
+                  <input matInput [ngModel]="editForm().lastName" (ngModelChange)="updateForm('lastName', $event)" required />
+                  @if (editErrors()['lastName']) {
+                    <mat-error>{{ editErrors()['lastName'] }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Телефон</mat-label>
                   <input matInput [ngModel]="editForm().phone" (ngModelChange)="updateForm('phone', $event)" />
+                  @if (editErrors()['phone']) {
+                    <mat-error>{{ editErrors()['phone'] }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Е-пошта</mat-label>
                   <input matInput [ngModel]="editForm().email" (ngModelChange)="updateForm('email', $event)" />
+                  @if (editErrors()['email']) {
+                    <mat-error>{{ editErrors()['email'] }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>ЕМБГ</mat-label>
-                  <input matInput [ngModel]="editForm().embg" (ngModelChange)="updateForm('embg', $event)" />
+                  <input matInput [ngModel]="editForm().embg" (ngModelChange)="updateForm('embg', $event)" maxlength="13" />
+                  @if (editErrors()['embg']) {
+                    <mat-error>{{ editErrors()['embg'] }}</mat-error>
+                  }
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Дата на раѓање</mat-label>
-                  <input matInput type="date" [ngModel]="editForm().dateOfBirth" (ngModelChange)="updateForm('dateOfBirth', $event)" />
+                  <input matInput [matDatepicker]="editDobPicker" [ngModel]="editDob()" (ngModelChange)="updateDob($event)" [max]="today" />
+                  <mat-datepicker-toggle matIconSuffix [for]="editDobPicker" />
+                  <mat-datepicker #editDobPicker />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="full-span">
                   <mat-label>Адреса</mat-label>

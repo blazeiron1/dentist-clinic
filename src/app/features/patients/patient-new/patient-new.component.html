@@ -6,53 +6,114 @@
 
   <mat-card>
     <mat-card-content>
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Име *</mat-label>
-          <input matInput [ngModel]="form().firstName" (ngModelChange)="update('firstName', $event)" />
-        </mat-form-field>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="form-section">
+          <div class="section-header">
+            <mat-icon class="section-icon">person</mat-icon>
+            <span>Лични податоци</span>
+          </div>
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Име</mat-label>
+              <mat-icon matPrefix>badge</mat-icon>
+              <input matInput formControlName="firstName" />
+              @if (form.get('firstName')?.hasError('required') && form.get('firstName')?.touched) {
+                <mat-error>Името е задолжително</mat-error>
+              } @else if (form.get('firstName')?.hasError('minlength') && form.get('firstName')?.touched) {
+                <mat-error>Минимум 2 карактери</mat-error>
+              }
+            </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Презиме *</mat-label>
-          <input matInput [ngModel]="form().lastName" (ngModelChange)="update('lastName', $event)" />
-        </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Презиме</mat-label>
+              <mat-icon matPrefix>badge</mat-icon>
+              <input matInput formControlName="lastName" />
+              @if (form.get('lastName')?.hasError('required') && form.get('lastName')?.touched) {
+                <mat-error>Презимето е задолжително</mat-error>
+              } @else if (form.get('lastName')?.hasError('minlength') && form.get('lastName')?.touched) {
+                <mat-error>Минимум 2 карактери</mat-error>
+              }
+            </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Телефон *</mat-label>
-          <input matInput [ngModel]="form().phone" (ngModelChange)="update('phone', $event)" />
-        </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>ЕМБГ</mat-label>
+              <mat-icon matPrefix>fingerprint</mat-icon>
+              <input matInput formControlName="embg" maxlength="13" />
+              @if (form.get('embg')?.hasError('pattern') && form.get('embg')?.touched) {
+                <mat-error>ЕМБГ мора да содржи точно 13 цифри</mat-error>
+              }
+            </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Е-пошта</mat-label>
-          <input matInput type="email" [ngModel]="form().email" (ngModelChange)="update('email', $event)" />
-        </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Дата на раѓање</mat-label>
+              <input matInput [matDatepicker]="dobPicker" formControlName="dateOfBirth" [max]="today" />
+              <mat-datepicker-toggle matIconSuffix [for]="dobPicker" />
+              <mat-datepicker #dobPicker />
+              @if (form.get('dateOfBirth')?.hasError('matDatepickerMax') && form.get('dateOfBirth')?.touched) {
+                <mat-error>Датумот не може да биде во иднина</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>ЕМБГ</mat-label>
-          <input matInput [ngModel]="form().embg" (ngModelChange)="update('embg', $event)" />
-        </mat-form-field>
+        <mat-divider></mat-divider>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Дата на раѓање</mat-label>
-          <input matInput type="date" [ngModel]="form().dateOfBirth" (ngModelChange)="update('dateOfBirth', $event)" />
-        </mat-form-field>
+        <div class="form-section">
+          <div class="section-header">
+            <mat-icon class="section-icon">contact_phone</mat-icon>
+            <span>Контакт</span>
+          </div>
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Телефон</mat-label>
+              <mat-icon matPrefix>phone</mat-icon>
+              <input matInput formControlName="phone" />
+              <mat-hint>пр. 07X XXX XXX</mat-hint>
+              @if (form.get('phone')?.hasError('required') && form.get('phone')?.touched) {
+                <mat-error>Телефонот е задолжителен</mat-error>
+              } @else if (form.get('phone')?.hasError('pattern') && form.get('phone')?.touched) {
+                <mat-error>Невалиден формат на телефон</mat-error>
+              }
+            </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-span">
-          <mat-label>Адреса</mat-label>
-          <input matInput [ngModel]="form().address" (ngModelChange)="update('address', $event)" />
-        </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Е-пошта</mat-label>
+              <mat-icon matPrefix>email</mat-icon>
+              <input matInput type="email" formControlName="email" />
+              @if (form.get('email')?.hasError('email') && form.get('email')?.touched) {
+                <mat-error>Невалидна е-пошта</mat-error>
+              }
+            </mat-form-field>
 
-        <mat-form-field appearance="outline" class="full-span">
-          <mat-label>Забелешки</mat-label>
-          <textarea matInput rows="3" [ngModel]="form().notes" (ngModelChange)="update('notes', $event)"></textarea>
-        </mat-form-field>
-      </div>
+            <mat-form-field appearance="outline" class="full-span">
+              <mat-label>Адреса</mat-label>
+              <mat-icon matPrefix>home</mat-icon>
+              <input matInput formControlName="address" />
+            </mat-form-field>
+          </div>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="form-section">
+          <div class="section-header">
+            <mat-icon class="section-icon">notes</mat-icon>
+            <span>Дополнително</span>
+          </div>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Забелешки</mat-label>
+            <textarea matInput rows="3" formControlName="notes"
+                      placeholder="Дополнителни информации за пациентот…"></textarea>
+          </mat-form-field>
+        </div>
+      </form>
     </mat-card-content>
 
     <mat-card-actions align="end">
       <button mat-button (click)="cancel()">Откажи</button>
       <button mat-flat-button color="primary" (click)="save()"
-              [disabled]="!form().firstName || !form().lastName || !form().phone">
+              [disabled]="form.invalid && form.touched">
+        <mat-icon>check</mat-icon>
         Зачувај
       </button>
     </mat-card-actions>
@@ -63,6 +124,16 @@
   .page-container { padding: 24px; max-width: 800px; margin: 0 auto; }
   .page-header { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
   .page-title { font-size: 22px; font-weight: 500; margin: 0; }
+  .form-section { padding: 20px 0; }
+  .section-header {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 500; color: var(--mat-sys-primary);
+    text-transform: uppercase; letter-spacing: 0.3px;
+    margin-bottom: 16px;
+  }
+  .section-icon { font-size: 20px; width: 20px; height: 20px; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
   .full-span { grid-column: span 2; }
+  .full-width { width: 100%; }
+  mat-divider { margin: 0 !important; }
 </style>

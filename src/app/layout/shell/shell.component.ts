@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../../core/services/auth.service';
 
-interface NavItem { label: string; icon: string; route: string; }
+interface NavItem { label: string; icon: string; route: string; alsoActive?: string[]; }
 
 @Component({
   selector: 'app-shell',
@@ -27,11 +27,17 @@ export class ShellComponent {
   auth = inject(AuthService);
 
   navItems: NavItem[] = [
-    { label: 'Календар', icon: 'calendar_month', route: '/calendar' },
+    { label: 'Календар', icon: 'calendar_month', route: '/calendar', alsoActive: ['/appointments'] },
     { label: 'Пациенти', icon: 'people', route: '/patients' },
     { label: 'Извештаи', icon: 'bar_chart', route: '/reports' },
     { label: 'Подесувања', icon: 'settings', route: '/settings' },
   ];
+
+  isActive(item: NavItem): boolean {
+    const url = this.router.url;
+    if (url.startsWith(item.route)) return true;
+    return item.alsoActive?.some(prefix => url.startsWith(prefix)) ?? false;
+  }
 
   logout(): void {
     this.auth.logout();

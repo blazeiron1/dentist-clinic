@@ -25,8 +25,10 @@ export class LoginComponent {
   hidePassword = signal(true);
   error = signal('');
   loading = signal(false);
+  submitted = signal(false);
 
   submit(): void {
+    this.submitted.set(true);
     if (!this.username() || !this.password()) {
       this.error.set('Внесете корисничко име и лозинка');
       return;

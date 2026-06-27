@@ -66,6 +66,7 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   private catalogSearch$ = new Subject<string>();
   private searchSub: any;
 
+  loading = signal(true);
   appointment = signal<Appointment | null>(null);
   patient = signal<Patient | null>(null);
   interventions = signal<Intervention[]>([]);
@@ -109,6 +110,7 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
     this.apptSvc.getById(id).subscribe({
       next: a => {
         this.appointment.set(a);
+        this.loading.set(false);
         this.patientSvc.getById(a.patientId).subscribe(p => this.patient.set(p));
         this.loadInterventions(a.id);
       },
@@ -135,6 +137,11 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   }
 
   setStatus(status: AppointmentStatus): void {
+    if (status === 'cancelled' || status === 'no-show') {
+      const label = status === 'cancelled' ? 'откажана' : 'не дојде';
+      const confirmed = confirm(`Дали сте сигурни дека сакате да го промените статусот во "${label}"?`);
+      if (!confirmed) return;
+    }
     const a = this.appointment()!;
     this.apptSvc.updateStatus(a.id, status).subscribe(updated => {
       this.appointment.set(updated);
@@ -159,6 +166,16 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   }
 
   onDraftCatalogSelect(item: CatalogItem): void {
+    const d = this.draft();
+    if (d && d.price > 0 && d.price !== item.lastPrice) {
+      const confirmed = confirm(
+        `Цената ќе се промени од ${d.price} на ${item.lastPrice} ден. Продолжи?`
+      );
+      if (!confirmed) {
+        this.draft.update(d => d ? { ...d, name: item.name } : d);
+        return;
+      }
+    }
     this.draft.update(d => d ? { ...d, name: item.name, price: item.lastPrice } : d);
   }
 
@@ -203,11 +220,11 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
         this.catalogSuggestions.set([]);
         this.submitting.set(false);
         this.loadInterventions(a.id);
-        this.snackBar.open('Интервенцијата е зачувана', 'OK', { duration: 2000 });
+        this.snackBar.open('Интервенцијата е зачувана', 'OK', { duration: 3000 });
       },
       error: () => {
         this.submitting.set(false);
-        this.snackBar.open('Неуспешно зачувување', 'OK', { duration: 2500 });
+        this.snackBar.open('Неуспешно зачувување', 'OK', { duration: 3000 });
       }
     });
   }
@@ -250,7 +267,7 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
         method: result.method as any,
       }).subscribe(() => {
         this.loadInterventions(this.appointment()!.id);
-        this.snackBar.open('Уплатата е евидентирана', 'OK', { duration: 2500 });
+        this.snackBar.open('Уплатата е евидентирана', 'OK', { duration: 3000 });
       });
     });
   }
