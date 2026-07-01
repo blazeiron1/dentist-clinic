@@ -27,6 +27,7 @@ import {
   Allergy, Condition, Medication, PatientDocument,
 } from '../../../core/models';
 import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
+import { letterheadHtml, letterheadStyles } from '../../../core/print-letterhead';
 
 @Component({
   selector: 'app-patient-detail',
@@ -179,8 +180,10 @@ export class PatientDetailComponent implements OnInit {
   .num { text-align: right; }
   .debt { color: #c62828; font-weight: 500; }
   tfoot td { border-top: 2px solid #ddd; font-weight: 600; padding-top: 10px; }
+${letterheadStyles()}
 </style>
 </head><body>
+${letterheadHtml()}
 <h1>Финансиски извештај — ${p.firstName} ${p.lastName}</h1>
 <p class="subtitle">${p.phone || ''} ${p.email ? '· ' + p.email : ''} · Печатено: ${fmtDate(new Date().toISOString())}</p>
 

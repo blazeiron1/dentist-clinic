@@ -18,6 +18,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ReportService, OutstandingBalance, PatientFinancialReport } from '../../core/services/report.service';
 import { PatientService } from '../../core/services/patient.service';
 import { ReportData, Patient } from '../../core/models';
+import { letterheadHtml, letterheadStyles } from '../../core/print-letterhead';
 import * as XLSX from 'xlsx';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, filter } from 'rxjs/operators';
@@ -300,8 +301,10 @@ export class ReportsComponent implements OnInit {
   th.num { text-align: right; }
   .debt { color: #c62828; font-weight: 500; }
   tfoot td { border-top: 2px solid #ddd; font-weight: 600; padding-top: 10px; }
+${letterheadStyles()}
 </style>
 </head><body>
+${letterheadHtml()}
 <h1>${title}</h1>
 <p class="subtitle">Печатено: ${fmtNow}</p>
 ${body}
