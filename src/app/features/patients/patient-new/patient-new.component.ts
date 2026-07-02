@@ -17,6 +17,7 @@ import { PatientService } from '../../../core/services/patient.service';
   imports: [ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatCardModule, MatDividerModule, MatDatepickerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './patient-new.component.html',
+  styleUrl: './patient-new.component.scss',
 })
 export class PatientNewComponent {
   private patientSvc = inject(PatientService);

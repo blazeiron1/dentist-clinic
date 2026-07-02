@@ -18,6 +18,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog } from '@angular/material/dialog';
 import { PatientService } from '../../../core/services/patient.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { InterventionService } from '../../../core/services/intervention.service';
@@ -29,6 +30,7 @@ import {
 import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
 import { ClinicInfoService } from '../../../core/services/clinic-info.service';
 import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../../core/print-letterhead';
+import { DeletePatientDialogComponent } from './delete-patient-dialog.component';
 
 @Component({
   selector: 'app-patient-detail',
@@ -51,6 +53,7 @@ export class PatientDetailComponent implements OnInit {
   private intSvc = inject(InterventionService);
   private docSvc = inject(DocumentService);
   private clinicInfoSvc = inject(ClinicInfoService);
+  private dialog = inject(MatDialog);
   private logoBase64 = signal<string | undefined>(undefined);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -276,7 +279,7 @@ ${interventions.length > 0 ? `
       lastName: f.lastName ?? p.lastName,
       phone: f.phone ?? p.phone,
       email: f.email,
-      embg: f.embg,
+      embg: p.embg,
       dateOfBirth: this.formatDate(this.editDob()),
       address: f.address,
       notes: f.notes,
@@ -295,6 +298,26 @@ ${interventions.length > 0 ? `
   }
 
   cancelEdit(): void { this.editMode.set(false); }
+
+  deletePatient(): void {
+    const p = this.patient()!;
+    this.dialog.open(DeletePatientDialogComponent, {
+      width: '480px',
+      disableClose: true,
+      data: {
+        firstName: p.firstName,
+        lastName: p.lastName,
+        appointmentCount: this.appointments().length,
+        interventionCount: this.allInterventions().length,
+      },
+    }).afterClosed().subscribe(confirmed => {
+      if (confirmed) {
+        this.patientSvc.delete(p.id).subscribe(() => {
+          this.router.navigate(['/patients']);
+        });
+      }
+    });
+  }
 
   updateForm(field: keyof Patient, value: string): void {
     this.editForm.update(f => ({ ...f, [field]: value }));

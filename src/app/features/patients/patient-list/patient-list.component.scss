@@ -1,15 +1,7 @@
-.page-container {
-  padding: 24px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
+@use '../../../shared' as *;
 
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
+.page-container { @include page-container; }
+.page-header { @include page-header; }
 
 .header-left {
   display: flex;
@@ -17,11 +9,7 @@
   gap: 10px;
 }
 
-.page-title {
-  font-size: 22px;
-  font-weight: 500;
-  margin: 0;
-}
+.page-title { @include page-title; }
 
 .patient-count {
   background: var(--mat-sys-primary);
@@ -34,10 +22,22 @@
   text-align: center;
 }
 
+// ── Search bar ───────────────────────────────────────────────────────────────
+.search-bar {
+  padding: 10px 20px;
+  background: var(--mat-sys-surface-container-low);
+  border: $card-border;
+  border-radius: $card-radius;
+  margin-bottom: 20px;
+}
+
 .search-field {
   width: 100%;
-  margin-bottom: 4px;
   display: block;
+
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+    display: none;
+  }
 }
 
 .loading-bar {
@@ -45,8 +45,10 @@
   border-radius: 4px;
 }
 
+// ── Table ────────────────────────────────────────────────────────────────────
 .table-wrapper {
-  border-radius: 10px;
+  border: $card-border;
+  border-radius: $card-radius;
   overflow: hidden;
 }
 
@@ -56,25 +58,23 @@
 
 .patient-row {
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.15s;
 
   &:hover {
     background: var(--mat-sys-surface-variant);
-
     .row-arrow { opacity: 1; }
   }
 }
 
-// Avatar column
 .avatar-col {
   width: 48px;
   padding-right: 0 !important;
 }
 
 .row-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
   display: flex;
@@ -108,7 +108,7 @@
   width: 16px;
   height: 16px;
   color: var(--mat-sys-on-surface-variant);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .date-cell {
@@ -116,7 +116,6 @@
   font-size: 13px;
 }
 
-// Arrow column
 .arrow-col {
   width: 40px;
   text-align: center;
@@ -133,32 +132,16 @@
   font-weight: 500;
 }
 
-// Empty state
+// ── Empty state ──────────────────────────────────────────────────────────────
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 64px 24px;
-  text-align: center;
-  color: var(--mat-sys-on-surface-variant);
-
-  h3 {
-    font-size: 18px;
-    font-weight: 500;
-    margin: 8px 0 0;
-    color: var(--mat-sys-on-surface);
-  }
-
-  p {
-    margin: 0 0 8px;
-    font-size: 14px;
-  }
+  @include empty-state;
+  border: 2px dashed var(--mat-sys-outline-variant);
+  border-radius: $card-radius;
 }
 
 .empty-icon {
-  font-size: 64px;
-  width: 64px;
-  height: 64px;
-  opacity: 0.25;
+  font-size: 56px;
+  width: 56px;
+  height: 56px;
+  opacity: 0.2;
 }

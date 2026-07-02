@@ -164,9 +164,9 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 
         <mat-card-content>
           <div class="backup-actions">
-            <button mat-flat-button color="primary" (click)="sendLogs()" [disabled]="exporting()">
-              <mat-icon>email</mat-icon>
-              Испрати логови на поддршка
+            <button mat-flat-button color="primary" (click)="downloadLogs()" [disabled]="exporting()">
+              <mat-icon>download</mat-icon>
+              Преземи логови
             </button>
           </div>
 
@@ -314,6 +314,7 @@ export class SettingsComponent implements OnInit {
   ngOnInit(): void {
     this.loadBackups();
     this.loadClinicInfo();
+    this.loadAuditLogs(0, 20);
   }
 
   onLogoSelected(event: Event): void {
@@ -427,18 +428,13 @@ export class SettingsComponent implements OnInit {
     this.loadAuditLogs(event.pageIndex, event.pageSize);
   }
 
-  sendLogs(): void {
+  downloadLogs(): void {
     this.exporting.set(true);
     this.auditSvc.exportBundle().subscribe({
       next: blob => {
         this.triggerDownload(blob, `dental-clinic-logs_${this.timestamp()}.zip`);
+        this.snackBar.open('Логовите се преземени', '', { duration: 3000 });
         this.exporting.set(false);
-        const recipients = 'kostoskid66@gmail.com,blagoja663@gmail.com';
-        const subject = encodeURIComponent('Dental Clinic - Логови');
-        const body = encodeURIComponent(
-          'Здраво,\n\nВо прилог се логовите од Dental Clinic апликацијата.\n\nВе молам прикачете го преземениот фајл: dental-clinic-logs_' + this.timestamp() + '.zip'
-        );
-        window.open(`mailto:${recipients}?subject=${subject}&body=${body}`, '_self');
       },
       error: () => {
         this.snackBar.open('Грешка при преземање логови', '', { duration: 3000 });

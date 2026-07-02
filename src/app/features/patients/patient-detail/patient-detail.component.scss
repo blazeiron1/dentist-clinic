@@ -1,8 +1,6 @@
-.page-container {
-  padding: 20px 24px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
+@use '../../../shared' as *;
+
+.page-container { @include page-container; }
 
 // ── Header ──────────────────────────────────────────────────────────────────
 .patient-header {
@@ -10,11 +8,10 @@
   align-items: center;
   gap: 16px;
   padding: 20px 24px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   background: var(--mat-sys-surface-container-low);
-  border-radius: 12px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  flex-wrap: wrap;
+  border-radius: $card-radius;
+  border: $card-border;
 }
 
 .back-btn { flex-shrink: 0; }
@@ -22,7 +19,7 @@
 .header-avatar {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
+  border-radius: 14px;
   background: var(--mat-sys-primary);
   color: var(--mat-sys-on-primary);
   display: flex;
@@ -40,15 +37,15 @@
 
 .patient-name {
   font-size: 22px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 4px;
+  letter-spacing: -0.3px;
 }
 
 .header-meta {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
 }
 
 .meta-item {
@@ -67,40 +64,32 @@
 
 .header-stats {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stat-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
   background: var(--mat-sys-surface-container);
-  min-width: 70px;
+  min-width: 72px;
 
   &.debt {
-    background: var(--mat-sys-error-container);
-    color: var(--mat-sys-on-error-container);
+    background: $color-danger-bg;
+    color: $color-danger;
   }
 }
 
-.stat-value { font-size: 18px; font-weight: 600; }
-.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--mat-sys-on-surface-variant); }
+.stat-value { font-size: 20px; font-weight: 700; }
+.stat-label { @include stat-label; }
 .stat-box.debt .stat-label { color: inherit; }
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 .detail-tabs { flex: 1; }
-.tab-icon { margin-right: 6px; font-size: 20px; width: 20px; height: 20px; }
-.tab-badge {
-  margin-left: 6px;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 600;
-}
+.tab-icon { @include tab-icon; }
+.tab-badge { @include tab-badge; }
 .tab-content { padding: 24px 0; }
 
 // ── Tab 1: Info ──────────────────────────────────────────────────────────────
@@ -111,69 +100,28 @@
   margin-bottom: 20px;
 }
 
-.info-card {
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 10px;
-  padding: 16px 20px;
-}
+.info-card { @include card; }
+.info-card-header { @include card-header; }
+.info-grid { @include info-grid; }
 
-.info-card-header {
+.info-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--mat-sys-primary);
-  margin-bottom: 16px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 24px;
-}
+.delete-btn { margin-left: auto; }
 
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  &.full { grid-column: span 2; }
-}
-
-.info-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--mat-sys-on-surface-variant);
-  font-weight: 500;
-}
-
-.info-value { font-size: 14px; }
-
-.edit-btn { margin-top: 4px; }
-
-.edit-card {
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 10px;
-  padding: 20px 24px;
-}
+.edit-card { @include card; }
 
 .edit-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0 0 16px;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 16px;
-  margin-bottom: 12px;
-}
-
+.form-grid { @include form-grid; }
 .full-span { grid-column: span 2; }
 
 .edit-actions {
@@ -185,25 +133,21 @@
 // ── Tab 2: Medical ───────────────────────────────────────────────────────────
 .medical-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
-.medical-card {
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 10px;
-  padding: 16px 20px;
-}
+.medical-card { @include card; }
 
 .medical-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 
   h3 {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     margin: 0;
     flex: 1;
   }
@@ -214,9 +158,9 @@
   width: 22px;
   height: 22px;
 
-  &.allergy { color: #e53935; }
-  &.condition { color: #1976d2; }
-  &.medication { color: #43a047; }
+  &.allergy { color: $color-danger; }
+  &.condition { color: $color-info; }
+  &.medication { color: $color-success; }
 }
 
 .badge {
@@ -225,7 +169,7 @@
   border-radius: 10px;
   padding: 1px 8px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .empty-hint {
@@ -238,46 +182,48 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .add-input {
   border: none;
-  border-bottom: 1px solid var(--mat-sys-outline);
+  border-bottom: 1.5px solid var(--mat-sys-outline);
   outline: none;
   font-size: 14px;
-  padding: 6px 0;
+  padding: 8px 0;
   background: transparent;
   color: inherit;
   flex: 1;
+  transition: border-color 0.15s;
 
   &:focus { border-bottom-color: var(--mat-sys-primary); }
 }
 
 // ── Tab 3: Appointments ──────────────────────────────────────────────────────
 .section-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--mat-sys-on-surface-variant);
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 
 .appt-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 8px;
+  padding: 14px 16px;
+  border: $card-border;
+  border-radius: $card-radius;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 
   &:hover {
     background: var(--mat-sys-surface-variant);
     border-color: var(--mat-sys-outline);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   }
 
   &.upcoming {
@@ -286,18 +232,18 @@
 }
 
 .appt-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 
-  &.scheduled { background: #e3f2fd; color: #1565c0; }
-  &.completed { background: #e8f5e9; color: #2e7d32; }
-  &.cancelled { background: #f5f5f5; color: #616161; }
-  &.no-show { background: #fff3e0; color: #e65100; }
+  &.scheduled { background: $color-info-bg; color: $color-info; }
+  &.completed { background: $color-success-bg; color: $color-success; }
+  &.cancelled { background: $color-muted-bg; color: $color-muted; }
+  &.no-show { background: $color-warning-bg; color: $color-warning; }
 
   mat-icon { font-size: 20px; width: 20px; height: 20px; }
 }
@@ -320,18 +266,7 @@
 
 .appt-arrow { color: var(--mat-sys-on-surface-variant); }
 
-.status-chip {
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-
-  &.status-scheduled { background: #e3f2fd; color: #1565c0; }
-  &.status-completed { background: #e8f5e9; color: #2e7d32; }
-  &.status-cancelled { background: #f5f5f5; color: #616161; }
-  &.status-no-show { background: #fff3e0; color: #e65100; }
-}
+.status-chip { @include status-chip; }
 
 .int-count { font-size: 12px; color: var(--mat-sys-on-surface-variant); }
 
@@ -344,25 +279,13 @@
 
 // ── Tab 4: Financials ────────────────────────────────────────────────────────
 .fin-summary {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
-  flex-wrap: wrap;
 }
 
-.fin-card {
-  flex: 1;
-  min-width: 160px;
-  padding: 16px 20px;
-  border-radius: 10px;
-  border: 1px solid var(--mat-sys-outline-variant);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  &.paid { border-color: #a5d6a7; background: #f1f8e9; }
-  &.outstanding.has-debt { border-color: #ef9a9a; background: #ffebee; }
-}
+.fin-card { @include fin-card; }
 
 .fin-icon {
   font-size: 24px;
@@ -370,26 +293,32 @@
   height: 24px;
   margin-bottom: 4px;
 
-  &.charged { color: #1976d2; }
-  &.paid-icon { color: #43a047; }
-  &.debt-icon { color: #e53935; }
+  &.charged { color: $color-info; }
+  &.paid-icon { color: $color-success; }
+  &.debt-icon { color: $color-danger; }
 }
 
-.fin-label { font-size: 11px; color: var(--mat-sys-on-surface-variant); text-transform: uppercase; letter-spacing: 0.5px; }
-.fin-value { font-size: 20px; font-weight: 600; }
+.fin-label { @include stat-label; }
+.fin-value { @include stat-value; }
 
-.fin-table { width: 100%; border-radius: 8px; overflow: hidden; }
-.debt-cell { color: var(--mat-sys-error); font-weight: 500; }
+.fin-table {
+  width: 100%;
+  border: $card-border;
+  border-radius: $card-radius;
+  overflow: hidden;
+}
+
+.debt-cell { color: $color-danger; font-weight: 600; }
 
 // ── Tab 5: Documents ─────────────────────────────────────────────────────────
 .upload-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 28px;
+  gap: 10px;
+  padding: 32px;
   border: 2px dashed var(--mat-sys-outline-variant);
-  border-radius: 10px;
+  border-radius: $card-radius;
   color: var(--mat-sys-on-surface-variant);
   margin-bottom: 16px;
   transition: border-color 0.2s, background 0.2s;
@@ -399,7 +328,7 @@
     background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
   }
 
-  .upload-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
+  .upload-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.35; }
   p { margin: 0; font-size: 14px; }
 }
 
@@ -408,14 +337,14 @@
 .doc-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .doc-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 8px;
   transition: background 0.12s;
 
@@ -452,20 +381,14 @@
 
 // ── Empty state ─────────────────────────────────────────────────────────────
 .empty-state-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 40px;
-  color: var(--mat-sys-on-surface-variant);
-
-  p { margin: 0; font-size: 14px; }
+  @include empty-state;
+  border: 2px dashed var(--mat-sys-outline-variant);
+  border-radius: $card-radius;
 }
 
 .empty-icon {
-  font-size: 48px;
-  width: 48px;
-  height: 48px;
-  opacity: 0.3;
+  font-size: 56px;
+  width: 56px;
+  height: 56px;
+  opacity: 0.2;
 }
-

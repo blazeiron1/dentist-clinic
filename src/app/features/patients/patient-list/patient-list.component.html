@@ -12,17 +12,19 @@
     </button>
   </div>
 
-  <mat-form-field appearance="outline" class="search-field">
-    <mat-icon matPrefix>search</mat-icon>
-    <mat-label>Пребарај по име, телефон или ЕМБГ</mat-label>
-    <input matInput [ngModel]="query()" (ngModelChange)="onSearch($event)"
-           placeholder="Ime, telefon ili EMBG…" />
-    @if (query()) {
-      <button matSuffix mat-icon-button (click)="onSearch('')" matTooltip="Исчисти">
-        <mat-icon>close</mat-icon>
-      </button>
-    }
-  </mat-form-field>
+  <div class="search-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Пребарај по име, телефон или ЕМБГ</mat-label>
+      <input matInput [ngModel]="query()" (ngModelChange)="onSearch($event)"
+             placeholder="Ime, telefon ili EMBG…" />
+      @if (query()) {
+        <button matSuffix mat-icon-button (click)="onSearch('')" matTooltip="Исчисти">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+  </div>
 
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
@@ -46,7 +48,7 @@
       }
     </div>
   } @else {
-    <div class="table-wrapper mat-elevation-z1">
+    <div class="table-wrapper">
       <table mat-table [dataSource]="displayedPatients()" class="patients-table">
 
         <ng-container matColumnDef="avatar">

@@ -10,118 +10,136 @@
         <mat-icon class="tab-icon">bar_chart</mat-icon>Финансиски извештај
       </ng-template>
 
-      <!-- Range selector -->
-      <div class="range-bar">
-        <mat-button-toggle-group [value]="range()" (change)="range.set($event.value)">
-          <mat-button-toggle value="today">Денес</mat-button-toggle>
-          <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
-          <mat-button-toggle value="month">Овој месец</mat-button-toggle>
-          <mat-button-toggle value="quarter">Три месечен</mat-button-toggle>
-          <mat-button-toggle value="custom">Период</mat-button-toggle>
-        </mat-button-toggle-group>
+      <div class="tab-body">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <mat-button-toggle-group [value]="range()" (change)="range.set($event.value)" class="range-toggle">
+              <mat-button-toggle value="today">Денес</mat-button-toggle>
+              <mat-button-toggle value="week">Оваа недела</mat-button-toggle>
+              <mat-button-toggle value="month">Овој месец</mat-button-toggle>
+              <mat-button-toggle value="quarter">Три месечен</mat-button-toggle>
+              <mat-button-toggle value="custom">Период</mat-button-toggle>
+            </mat-button-toggle-group>
 
-        @if (range() === 'custom') {
-          <div class="custom-range">
-            <mat-form-field appearance="outline" class="date-field">
-              <mat-label>Од</mat-label>
-              <input matInput [matDatepicker]="customFromPicker" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
-              <mat-datepicker-toggle matIconSuffix [for]="customFromPicker" />
-              <mat-datepicker #customFromPicker />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="date-field">
-              <mat-label>До</mat-label>
-              <input matInput [matDatepicker]="customToPicker" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
-              <mat-datepicker-toggle matIconSuffix [for]="customToPicker" />
-              <mat-datepicker #customToPicker />
-            </mat-form-field>
-            <button mat-flat-button color="primary" (click)="loadCustom()"
-                    [disabled]="!customFrom() || !customTo()">
-              <mat-icon>search</mat-icon>Прикажи
+            @if (range() === 'custom') {
+              <div class="custom-range">
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label>Од</mat-label>
+                  <input matInput [matDatepicker]="customFromPicker" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)" />
+                  <mat-datepicker-toggle matIconSuffix [for]="customFromPicker" />
+                  <mat-datepicker #customFromPicker />
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label>До</mat-label>
+                  <input matInput [matDatepicker]="customToPicker" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)" />
+                  <mat-datepicker-toggle matIconSuffix [for]="customToPicker" />
+                  <mat-datepicker #customToPicker />
+                </mat-form-field>
+                <button mat-flat-button color="primary" (click)="loadCustom()"
+                        [disabled]="!customFrom() || !customTo()">
+                  <mat-icon>search</mat-icon>Прикажи
+                </button>
+              </div>
+            }
+          </div>
+          <div class="toolbar-actions">
+            <button mat-stroked-button (click)="printFinancialReport()">
+              <mat-icon>print</mat-icon>Печати
+            </button>
+            <button mat-flat-button color="primary" (click)="exportExcel()">
+              <mat-icon>download</mat-icon>Excel
             </button>
           </div>
-        }
+        </div>
 
-        <span class="spacer"></span>
-        <button mat-stroked-button (click)="printFinancialReport()">
-          <mat-icon>print</mat-icon>Печати
-        </button>
-        <button mat-flat-button color="primary" (click)="exportExcel()">
-          <mat-icon>download</mat-icon>Excel
-        </button>
-      </div>
-
-      <!-- KPI cards -->
-      <div class="kpi-row">
-        <mat-card class="kpi-card">
-          <mat-icon class="kpi-icon revenue">payments</mat-icon>
-          <div class="kpi-label">Приход</div>
-          <div class="kpi-value">{{ data().revenue | number }} ден</div>
-        </mat-card>
-        <mat-card class="kpi-card">
-          <mat-icon class="kpi-icon outstanding">account_balance_wallet</mat-icon>
-          <div class="kpi-label">Неплатено</div>
-          <div class="kpi-value outstanding-val">{{ data().outstanding | number }} ден</div>
-        </mat-card>
-        <mat-card class="kpi-card">
-          <mat-icon class="kpi-icon appts">calendar_month</mat-icon>
-          <div class="kpi-label">Средби</div>
-          <div class="kpi-value">{{ data().appointmentCount }}</div>
-        </mat-card>
-        <mat-card class="kpi-card">
-          <mat-icon class="kpi-icon ints">medical_services</mat-icon>
-          <div class="kpi-label">Интервенции</div>
-          <div class="kpi-value">{{ data().interventionCount }}</div>
-        </mat-card>
-      </div>
-
-      <!-- Charts row -->
-      <div class="charts-row">
-        <!-- Bar chart: revenue by type -->
-        <mat-card class="chart-card bar-card">
-          <h3 class="chart-title">Приход по вид интервенција</h3>
-          @if (data().revenueByType.length === 0) {
-            <p class="empty-chart">Нема податоци</p>
-          } @else {
-            <div class="bar-chart">
-              @for (item of data().revenueByType; track item.name) {
-                <div class="bar-row">
-                  <span class="bar-label" [title]="item.name">{{ item.name }}</span>
-                  <div class="bar-track">
-                    <div class="bar-fill"
-                         [style.width.%]="maxBarValue() > 0 ? (item.amount / maxBarValue()) * 100 : 0">
-                    </div>
-                  </div>
-                  <span class="bar-value">{{ item.amount | number }}</span>
-                </div>
-              }
+        <!-- KPI cards -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap revenue">
+              <mat-icon>payments</mat-icon>
             </div>
-          }
-        </mat-card>
+            <div class="kpi-content">
+              <div class="kpi-label">Приход</div>
+              <div class="kpi-value">{{ data().revenue | number }} ден</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap outstanding">
+              <mat-icon>account_balance_wallet</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Неплатено</div>
+              <div class="kpi-value outstanding-val">{{ data().outstanding | number }} ден</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap appts">
+              <mat-icon>calendar_month</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Средби</div>
+              <div class="kpi-value">{{ data().appointmentCount }}</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap ints">
+              <mat-icon>medical_services</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Интервенции</div>
+              <div class="kpi-value">{{ data().interventionCount }}</div>
+            </div>
+          </div>
+        </div>
 
-        <!-- Pie chart: payment method -->
-        <mat-card class="chart-card pie-card">
-          <h3 class="chart-title">Начин на плаќање</h3>
-          @if (data().paymentMethodBreakdown.length === 0) {
-            <p class="empty-chart">Нема податоци</p>
-          } @else {
-            <div class="pie-wrapper">
-              <svg viewBox="0 0 120 120" class="pie-svg">
-                @for (s of piePaths(); track s.label) {
-                  <path [attr.d]="s.path" [attr.fill]="s.color" stroke="#fff" stroke-width="1" />
-                }
-              </svg>
-              <div class="pie-legend">
-                @for (s of piePaths(); track s.label) {
-                  <div class="pie-legend-item">
-                    <span class="pie-swatch" [style.background]="s.color"></span>
-                    <span>{{ s.label }}</span>
-                    <span class="pie-pct">{{ s.pct }}%</span>
+        <!-- Charts row -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3 class="chart-title">Приход по вид интервенција</h3>
+            @if (data().revenueByType.length === 0) {
+              <p class="empty-chart">Нема податоци</p>
+            } @else {
+              <div class="bar-chart">
+                @for (item of data().revenueByType; track item.name) {
+                  <div class="bar-row">
+                    <span class="bar-label" [title]="item.name">{{ item.name }}</span>
+                    <div class="bar-track">
+                      <div class="bar-fill"
+                           [style.width.%]="maxBarValue() > 0 ? (item.amount / maxBarValue()) * 100 : 0">
+                      </div>
+                    </div>
+                    <span class="bar-value">{{ item.amount | number }}</span>
                   </div>
                 }
               </div>
-            </div>
-          }
-        </mat-card>
+            }
+          </div>
+
+          <div class="chart-card pie-card">
+            <h3 class="chart-title">Начин на плаќање</h3>
+            @if (data().paymentMethodBreakdown.length === 0) {
+              <p class="empty-chart">Нема податоци</p>
+            } @else {
+              <div class="pie-wrapper">
+                <svg viewBox="0 0 120 120" class="pie-svg">
+                  @for (s of piePaths(); track s.label) {
+                    <path [attr.d]="s.path" [attr.fill]="s.color" stroke="#fff" stroke-width="1" />
+                  }
+                </svg>
+                <div class="pie-legend">
+                  @for (s of piePaths(); track s.label) {
+                    <div class="pie-legend-item">
+                      <span class="pie-swatch" [style.background]="s.color"></span>
+                      <span>{{ s.label }}</span>
+                      <span class="pie-pct">{{ s.pct }}%</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
       </div>
     </mat-tab>
 
@@ -134,13 +152,13 @@
         }
       </ng-template>
 
-      <div class="outstanding-section">
-        <div class="outstanding-header">
-          <div class="outstanding-total">
-            <span class="outstanding-total-label">Вкупен долг:</span>
-            <span class="outstanding-total-value">{{ totalOutstanding() | number }} ден</span>
+      <div class="tab-body">
+        <div class="section-header-bar">
+          <div class="section-headline">
+            <span class="section-headline-label">Вкупен долг:</span>
+            <span class="section-headline-value debt-color">{{ totalOutstanding() | number }} ден</span>
           </div>
-          <div class="header-actions">
+          <div class="toolbar-actions">
             <button mat-stroked-button (click)="printOutstanding()"
                     [disabled]="outstandingList().length === 0">
               <mat-icon>print</mat-icon>Печати
@@ -153,35 +171,37 @@
         </div>
 
         @if (outstandingList().length === 0) {
-          <div class="empty-outstanding">
+          <div class="empty-section">
             <mat-icon class="empty-icon">check_circle</mat-icon>
             <p>Нема неплатени пациенти</p>
           </div>
         } @else {
-          <table mat-table [dataSource]="outstandingList()" class="outstanding-table mat-elevation-z1">
-            <ng-container matColumnDef="patient">
-              <th mat-header-cell *matHeaderCellDef>Пациент</th>
-              <td mat-cell *matCellDef="let o">
-                <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="billed">
-              <th mat-header-cell *matHeaderCellDef>Наплатено</th>
-              <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
-            </ng-container>
-            <ng-container matColumnDef="paid">
-              <th mat-header-cell *matHeaderCellDef>Платено</th>
-              <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
-            </ng-container>
-            <ng-container matColumnDef="outstanding">
-              <th mat-header-cell *matHeaderCellDef>Долг</th>
-              <td mat-cell *matCellDef="let o">
-                <span class="debt-amount">{{ o.outstanding | number }} ден</span>
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="outstandingCols"></tr>
-            <tr mat-row *matRowDef="let r; columns: outstandingCols;"></tr>
-          </table>
+          <div class="table-container">
+            <table mat-table [dataSource]="outstandingList()" class="data-table">
+              <ng-container matColumnDef="patient">
+                <th mat-header-cell *matHeaderCellDef>Пациент</th>
+                <td mat-cell *matCellDef="let o">
+                  <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="billed">
+                <th mat-header-cell *matHeaderCellDef>Наплатено</th>
+                <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
+              </ng-container>
+              <ng-container matColumnDef="paid">
+                <th mat-header-cell *matHeaderCellDef>Платено</th>
+                <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
+              </ng-container>
+              <ng-container matColumnDef="outstanding">
+                <th mat-header-cell *matHeaderCellDef>Долг</th>
+                <td mat-cell *matCellDef="let o">
+                  <span class="debt-amount">{{ o.outstanding | number }} ден</span>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="outstandingCols"></tr>
+              <tr mat-row *matRowDef="let r; columns: outstandingCols;"></tr>
+            </table>
+          </div>
         }
       </div>
     </mat-tab>
@@ -195,13 +215,13 @@
         }
       </ng-template>
 
-      <div class="outstanding-section">
-        <div class="outstanding-header">
-          <div class="outstanding-total">
-            <span class="outstanding-total-label">Вкупно наплатено:</span>
-            <span class="all-patients-total-value">{{ allPatientsTotal().billed | number }} ден</span>
+      <div class="tab-body">
+        <div class="section-header-bar">
+          <div class="section-headline">
+            <span class="section-headline-label">Вкупно наплатено:</span>
+            <span class="section-headline-value info-color">{{ allPatientsTotal().billed | number }} ден</span>
           </div>
-          <div class="header-actions">
+          <div class="toolbar-actions">
             <button mat-stroked-button (click)="printAllPatients()"
                     [disabled]="allPatientsList().length === 0">
               <mat-icon>print</mat-icon>Печати
@@ -213,130 +233,150 @@
           </div>
         </div>
 
-        <!-- Filters -->
-        <div class="ap-filters">
-          <mat-form-field appearance="outline" class="ap-filter-field">
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <mat-form-field appearance="outline" class="filter-search">
             <mat-label>Пребарај пациент</mat-label>
             <mat-icon matPrefix>search</mat-icon>
             <input matInput [ngModel]="apQuery()" (ngModelChange)="onApQueryChange($event)"
                    placeholder="Име или презиме…" />
           </mat-form-field>
           <mat-button-toggle-group [value]="apDebtFilter()" (change)="onDebtFilterChange($event.value)"
-                                   class="debt-filter">
+                                   class="filter-toggle">
             <mat-button-toggle value="all">Сите</mat-button-toggle>
             <mat-button-toggle value="debt">Со долг</mat-button-toggle>
             <mat-button-toggle value="no-debt">Без долг</mat-button-toggle>
           </mat-button-toggle-group>
-          <mat-form-field appearance="outline" class="date-field">
-            <mat-label>Од</mat-label>
-            <input matInput [matDatepicker]="apFromPicker" [ngModel]="apFrom()"
-                   (ngModelChange)="apFrom.set($event)" (dateChange)="apApplyDateFilter()" />
-            <mat-datepicker-toggle matIconSuffix [for]="apFromPicker" />
-            <mat-datepicker #apFromPicker />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="date-field">
-            <mat-label>До</mat-label>
-            <input matInput [matDatepicker]="apToPicker" [ngModel]="apTo()"
-                   (ngModelChange)="apTo.set($event)" (dateChange)="apApplyDateFilter()" />
-            <mat-datepicker-toggle matIconSuffix [for]="apToPicker" />
-            <mat-datepicker #apToPicker />
-          </mat-form-field>
+          <div class="filter-dates">
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>Од</mat-label>
+              <input matInput [matDatepicker]="apFromPicker" [ngModel]="apFrom()"
+                     (ngModelChange)="apFrom.set($event)" (dateChange)="apApplyDateFilter()" />
+              <mat-datepicker-toggle matIconSuffix [for]="apFromPicker" />
+              <mat-datepicker #apFromPicker />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>До</mat-label>
+              <input matInput [matDatepicker]="apToPicker" [ngModel]="apTo()"
+                     (ngModelChange)="apTo.set($event)" (dateChange)="apApplyDateFilter()" />
+              <mat-datepicker-toggle matIconSuffix [for]="apToPicker" />
+              <mat-datepicker #apToPicker />
+            </mat-form-field>
+          </div>
           @if (apFrom() !== null || apTo() !== null || apQuery() || apDebtFilter() !== 'all') {
-            <button mat-icon-button (click)="apClearFilters()" matTooltip="Исчисти филтри">
+            <button mat-icon-button (click)="apClearFilters()" matTooltip="Исчисти филтри" class="clear-btn">
               <mat-icon>clear</mat-icon>
             </button>
           }
         </div>
 
         <!-- Summary cards -->
-        <div class="kpi-row">
-          <mat-card class="kpi-card">
-            <mat-icon class="kpi-icon revenue">groups</mat-icon>
-            <div class="kpi-label">Пациенти</div>
-            <div class="kpi-value">{{ allPatientsList().length }}</div>
-          </mat-card>
-          <mat-card class="kpi-card">
-            <mat-icon class="kpi-icon appts">receipt_long</mat-icon>
-            <div class="kpi-label">Вкупно наплатено</div>
-            <div class="kpi-value">{{ allPatientsTotal().billed | number }} ден</div>
-          </mat-card>
-          <mat-card class="kpi-card">
-            <mat-icon class="kpi-icon revenue">check_circle</mat-icon>
-            <div class="kpi-label">Платено</div>
-            <div class="kpi-value">{{ allPatientsTotal().paid | number }} ден</div>
-          </mat-card>
-          <mat-card class="kpi-card">
-            <mat-icon class="kpi-icon outstanding">account_balance_wallet</mat-icon>
-            <div class="kpi-label">Долг</div>
-            <div class="kpi-value outstanding-val">{{ allPatientsTotal().outstanding | number }} ден</div>
-          </mat-card>
+        <div class="kpi-row compact">
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap revenue">
+              <mat-icon>groups</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Пациенти</div>
+              <div class="kpi-value">{{ allPatientsList().length }}</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap appts">
+              <mat-icon>receipt_long</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Вкупно наплатено</div>
+              <div class="kpi-value">{{ allPatientsTotal().billed | number }} ден</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap revenue">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Платено</div>
+              <div class="kpi-value">{{ allPatientsTotal().paid | number }} ден</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon-wrap outstanding">
+              <mat-icon>account_balance_wallet</mat-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-label">Долг</div>
+              <div class="kpi-value outstanding-val">{{ allPatientsTotal().outstanding | number }} ден</div>
+            </div>
+          </div>
         </div>
 
         @if (allPatientsList().length === 0) {
-          <div class="empty-outstanding">
+          <div class="empty-section">
             <mat-icon class="empty-icon">groups</mat-icon>
             <p>Нема пациенти со интервенции</p>
           </div>
         } @else {
-          <table mat-table [dataSource]="allPatientsList()" class="outstanding-table mat-elevation-z1">
-            <ng-container matColumnDef="patient">
-              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('patient')">
-                Пациент
-                @if (apSort() === 'name') {
-                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                }
-              </th>
-              <td mat-cell *matCellDef="let o">
-                <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('date')">
-                Последна посета
-                @if (apSort() === 'date') {
-                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                }
-              </th>
-              <td mat-cell *matCellDef="let o">
-                {{ o.lastVisit ? (o.lastVisit | date:'d.M.y') : '—' }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="billed">
-              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('billed')">
-                Наплатено
-                @if (apSort() === 'billed') {
-                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                }
-              </th>
-              <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
-            </ng-container>
-            <ng-container matColumnDef="paid">
-              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('paid')">
-                Платено
-                @if (apSort() === 'paid') {
-                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                }
-              </th>
-              <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
-            </ng-container>
-            <ng-container matColumnDef="outstanding">
-              <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('outstanding')">
-                Долг
-                @if (apSort() === 'outstanding') {
-                  <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-                }
-              </th>
-              <td mat-cell *matCellDef="let o">
-                @if (o.outstanding > 0) {
-                  <span class="debt-amount">{{ o.outstanding | number }} ден</span>
-                } @else {
-                  {{ o.outstanding | number }} ден
-                }
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="allPatientsCols"></tr>
-            <tr mat-row *matRowDef="let r; columns: allPatientsCols;"></tr>
-          </table>
+          <div class="table-container">
+            <table mat-table [dataSource]="allPatientsList()" class="data-table">
+              <ng-container matColumnDef="patient">
+                <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('patient')">
+                  Пациент
+                  @if (apSort() === 'name') {
+                    <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  }
+                </th>
+                <td mat-cell *matCellDef="let o">
+                  <a [routerLink]="['/patients', o.patientId]" class="patient-link">{{ o.patientName }}</a>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('date')">
+                  Последна посета
+                  @if (apSort() === 'date') {
+                    <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  }
+                </th>
+                <td mat-cell *matCellDef="let o">
+                  {{ o.lastVisit ? (o.lastVisit | date:'d.M.y') : '—' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="billed">
+                <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('billed')">
+                  Наплатено
+                  @if (apSort() === 'billed') {
+                    <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  }
+                </th>
+                <td mat-cell *matCellDef="let o">{{ o.totalBilled | number }} ден</td>
+              </ng-container>
+              <ng-container matColumnDef="paid">
+                <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('paid')">
+                  Платено
+                  @if (apSort() === 'paid') {
+                    <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  }
+                </th>
+                <td mat-cell *matCellDef="let o">{{ o.totalPaid | number }} ден</td>
+              </ng-container>
+              <ng-container matColumnDef="outstanding">
+                <th mat-header-cell *matHeaderCellDef class="sortable-header" (click)="apToggleSort('outstanding')">
+                  Долг
+                  @if (apSort() === 'outstanding') {
+                    <mat-icon class="sort-icon">{{ apDir() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  }
+                </th>
+                <td mat-cell *matCellDef="let o">
+                  @if (o.outstanding > 0) {
+                    <span class="debt-amount">{{ o.outstanding | number }} ден</span>
+                  } @else {
+                    {{ o.outstanding | number }} ден
+                  }
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="allPatientsCols"></tr>
+              <tr mat-row *matRowDef="let r; columns: allPatientsCols;"></tr>
+            </table>
+          </div>
         }
       </div>
     </mat-tab>
@@ -347,7 +387,7 @@
         <mat-icon class="tab-icon">person_search</mat-icon>По пациент
       </ng-template>
 
-      <div class="patient-report-section">
+      <div class="tab-body">
         <!-- Patient search -->
         <div class="patient-search">
           <mat-form-field appearance="outline" class="patient-search-field">
@@ -375,9 +415,12 @@
 
         @if (patientReport(); as pr) {
           <div class="patient-report-content">
-            <div class="patient-report-header">
-              <h3 class="patient-report-name">{{ pr.patientName }}</h3>
-              <div class="header-actions">
+            <div class="section-header-bar">
+              <div class="section-headline">
+                <span class="section-headline-label">Пациент:</span>
+                <span class="patient-report-name">{{ pr.patientName }}</span>
+              </div>
+              <div class="toolbar-actions">
                 <button mat-stroked-button (click)="printPatientReport()">
                   <mat-icon>print</mat-icon>Печати
                 </button>
@@ -408,45 +451,47 @@
 
             <!-- Interventions table -->
             @if (pr.interventions.length > 0) {
-              <table mat-table [dataSource]="pr.interventions" class="fin-table mat-elevation-z1">
-                <ng-container matColumnDef="date">
-                  <th mat-header-cell *matHeaderCellDef>Датум</th>
-                  <td mat-cell *matCellDef="let i">{{ i.performedAt ? (i.performedAt | date:'d.M.y') : '—' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="intervention">
-                  <th mat-header-cell *matHeaderCellDef>Интервенција</th>
-                  <td mat-cell *matCellDef="let i">{{ i.name }}</td>
-                </ng-container>
-                <ng-container matColumnDef="teeth">
-                  <th mat-header-cell *matHeaderCellDef>Заби</th>
-                  <td mat-cell *matCellDef="let i">{{ i.teeth.join(', ') || '—' }}</td>
-                </ng-container>
-                <ng-container matColumnDef="price">
-                  <th mat-header-cell *matHeaderCellDef>Цена</th>
-                  <td mat-cell *matCellDef="let i">{{ i.price | number }} ден</td>
-                </ng-container>
-                <ng-container matColumnDef="paid">
-                  <th mat-header-cell *matHeaderCellDef>Платено</th>
-                  <td mat-cell *matCellDef="let i">{{ i.paidAmount | number }} ден</td>
-                </ng-container>
-                <ng-container matColumnDef="outstanding">
-                  <th mat-header-cell *matHeaderCellDef>Долг</th>
-                  <td mat-cell *matCellDef="let i">
-                    <span [class.debt-cell]="i.outstanding > 0">{{ i.outstanding | number }} ден</span>
-                  </td>
-                </ng-container>
-                <tr mat-header-row *matHeaderRowDef="patientReportCols"></tr>
-                <tr mat-row *matRowDef="let r; columns: patientReportCols;"></tr>
-              </table>
+              <div class="table-container">
+                <table mat-table [dataSource]="pr.interventions" class="data-table">
+                  <ng-container matColumnDef="date">
+                    <th mat-header-cell *matHeaderCellDef>Датум</th>
+                    <td mat-cell *matCellDef="let i">{{ i.performedAt ? (i.performedAt | date:'d.M.y') : '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="intervention">
+                    <th mat-header-cell *matHeaderCellDef>Интервенција</th>
+                    <td mat-cell *matCellDef="let i">{{ i.name }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="teeth">
+                    <th mat-header-cell *matHeaderCellDef>Заби</th>
+                    <td mat-cell *matCellDef="let i">{{ i.teeth.join(', ') || '—' }}</td>
+                  </ng-container>
+                  <ng-container matColumnDef="price">
+                    <th mat-header-cell *matHeaderCellDef>Цена</th>
+                    <td mat-cell *matCellDef="let i">{{ i.price | number }} ден</td>
+                  </ng-container>
+                  <ng-container matColumnDef="paid">
+                    <th mat-header-cell *matHeaderCellDef>Платено</th>
+                    <td mat-cell *matCellDef="let i">{{ i.paidAmount | number }} ден</td>
+                  </ng-container>
+                  <ng-container matColumnDef="outstanding">
+                    <th mat-header-cell *matHeaderCellDef>Долг</th>
+                    <td mat-cell *matCellDef="let i">
+                      <span [class.debt-cell]="i.outstanding > 0">{{ i.outstanding | number }} ден</span>
+                    </td>
+                  </ng-container>
+                  <tr mat-header-row *matHeaderRowDef="patientReportCols"></tr>
+                  <tr mat-row *matRowDef="let r; columns: patientReportCols;"></tr>
+                </table>
+              </div>
             } @else {
-              <div class="empty-outstanding">
+              <div class="empty-section">
                 <mat-icon class="empty-icon">medical_services</mat-icon>
                 <p>Нема интервенции</p>
               </div>
             }
           </div>
         } @else if (!patientQuery()) {
-          <div class="empty-outstanding">
+          <div class="empty-section">
             <mat-icon class="empty-icon">person_search</mat-icon>
             <p>Изберете пациент за да видите финансиски извештај</p>
           </div>

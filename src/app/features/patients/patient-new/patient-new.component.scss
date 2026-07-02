@@ -1,0 +1,21 @@
+@use '../../../shared' as *;
+
+.page-container { @include page-container; max-width: 800px; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.page-title { @include page-title; }
+
+.form-section { padding: 20px 0; }
+
+.section-header { @include card-header; }
+.section-icon { font-size: 20px; width: 20px; height: 20px; }
+.form-grid { @include form-grid; }
+.full-span { grid-column: span 2; }
+.full-width { width: 100%; }
+mat-divider { margin: 0 !important; }

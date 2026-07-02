@@ -1,0 +1,196 @@
+// Shared design tokens and mixins for cohesive UI across all sections
+
+// ── Spacing ──────────────────────────────────────────────────────────────────
+$page-padding: 32px;
+$page-max-width: 1140px;
+$card-radius: 10px;
+$card-border: 1px solid var(--mat-sys-outline-variant);
+$card-padding: 20px 24px;
+
+// ── Semantic colors ──────────────────────────────────────────────────────────
+$color-success: #2e7d32;
+$color-success-bg: #e8f5e9;
+$color-success-border: #a5d6a7;
+
+$color-danger: #c62828;
+$color-danger-bg: #ffebee;
+$color-danger-border: #ef9a9a;
+
+$color-warning: #e65100;
+$color-warning-bg: #fff3e0;
+
+$color-info: #1565c0;
+$color-info-bg: #e3f2fd;
+
+$color-muted: #616161;
+$color-muted-bg: #f5f5f5;
+
+// ── Mixins ───────────────────────────────────────────────────────────────────
+@mixin page-container {
+  padding: $page-padding;
+  max-width: $page-max-width;
+  margin: 0 auto;
+}
+
+@mixin page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+@mixin page-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+@mixin card {
+  border: $card-border;
+  border-radius: $card-radius;
+  padding: $card-padding;
+  background: var(--mat-sys-surface);
+}
+
+@mixin card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mat-sys-primary);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+@mixin table-wrapper {
+  border-radius: $card-radius;
+  overflow: hidden;
+}
+
+@mixin stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mat-sys-on-surface-variant);
+  font-weight: 500;
+}
+
+@mixin stat-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+@mixin empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  .empty-icon {
+    font-size: 56px;
+    width: 56px;
+    height: 56px;
+    opacity: 0.2;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 8px 0 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0 0 8px;
+    font-size: 14px;
+  }
+}
+
+@mixin status-chip {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+
+  &.status-scheduled { background: $color-info-bg; color: $color-info; }
+  &.status-completed { background: $color-success-bg; color: $color-success; }
+  &.status-cancelled { background: $color-muted-bg; color: $color-muted; }
+  &.status-no-show { background: $color-warning-bg; color: $color-warning; }
+}
+
+@mixin fin-card {
+  flex: 1;
+  min-width: 170px;
+  padding: 18px 22px;
+  border-radius: $card-radius;
+  border: $card-border;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &.paid { border-color: $color-success-border; background: $color-success-bg; }
+  &.outstanding.has-debt { border-color: $color-danger-border; background: $color-danger-bg; }
+}
+
+@mixin section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+// ── Tab styling ──────────────────────────────────────────────────────────────
+@mixin tab-icon {
+  margin-right: 6px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+@mixin tab-badge {
+  margin-left: 6px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@mixin form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+
+  .full-span { grid-column: span 2; }
+}
+
+@mixin info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 32px;
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    &.full { grid-column: span 2; }
+  }
+
+  .info-label {
+    @include stat-label;
+  }
+
+  .info-value {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}

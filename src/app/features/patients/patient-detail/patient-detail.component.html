@@ -101,9 +101,14 @@
                 </div>
               </div>
             </div>
-            <button mat-flat-button color="primary" (click)="startEdit()" class="edit-btn">
-              <mat-icon>edit</mat-icon>Уреди податоци
-            </button>
+            <div class="info-actions">
+              <button mat-flat-button color="primary" (click)="startEdit()" class="edit-btn">
+                <mat-icon>edit</mat-icon>Уреди податоци
+              </button>
+              <button mat-stroked-button color="warn" (click)="deletePatient()" class="delete-btn">
+                <mat-icon>delete_forever</mat-icon>Избриши пациент
+              </button>
+            </div>
           } @else {
             <div class="edit-card">
               <h3 class="edit-title">Уреди податоци на пациент</h3>
@@ -138,10 +143,8 @@
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>ЕМБГ</mat-label>
-                  <input matInput [ngModel]="editForm().embg" (ngModelChange)="updateForm('embg', $event)" maxlength="13" />
-                  @if (editErrors()['embg']) {
-                    <mat-error>{{ editErrors()['embg'] }}</mat-error>
-                  }
+                  <input matInput [ngModel]="editForm().embg" disabled maxlength="13" />
+                  <mat-hint>ЕМБГ не може да се менува</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline">
                   <mat-label>Дата на раѓање</mat-label>
