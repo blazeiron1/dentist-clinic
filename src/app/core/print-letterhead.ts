@@ -1,10 +1,4 @@
-export const CLINIC_INFO = {
-  name: 'Mersiha Dental',
-  address: 'ul. Dame Gruev br. 11a, Ohrid 6000',
-  phone: '076454024',
-  email: 'dmersihaljato@gmail.com',
-  logoUrl: '/logo.png',
-};
+import { ClinicInfo } from './services/clinic-info.service';
 
 export function letterheadStyles(): string {
   return `
@@ -14,15 +8,33 @@ export function letterheadStyles(): string {
   .letterhead-detail { font-size: 11px; color: #555; }`;
 }
 
-export function letterheadHtml(): string {
-  const c = CLINIC_INFO;
+export function letterheadHtml(clinicInfo: ClinicInfo, logoBase64?: string): string {
+  const c = clinicInfo;
+  const logoSrc = logoBase64 || c.logoUrl;
   return `
   <div class="letterhead">
-    <img class="letterhead-logo" src="${c.logoUrl}" alt="${c.name}" />
+    ${logoSrc ? `<img class="letterhead-logo" src="${logoSrc}" alt="${c.name}" />` : ''}
     <div>
       <div class="letterhead-name">${c.name}</div>
       <div class="letterhead-detail">${c.address}</div>
       <div class="letterhead-detail">${c.phone} &middot; ${c.email}</div>
     </div>
   </div>`;
+}
+
+export async function fetchLogoAsBase64(url: string): Promise<string | undefined> {
+  if (!url) return undefined;
+  try {
+    const response = await fetch(url, { credentials: 'include' });
+    if (!response.ok) return undefined;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(undefined);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return undefined;
+  }
 }

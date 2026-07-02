@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -8,6 +8,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { AuthService } from '../../core/services/auth.service';
+import { HealthService } from '../../core/services/health.service';
+import { BackupStatusService } from '../../core/services/backup-status.service';
 
 interface NavItem { label: string; icon: string; route: string; alsoActive?: string[]; }
 
@@ -22,9 +24,11 @@ interface NavItem { label: string; icon: string; route: string; alsoActive?: str
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   auth = inject(AuthService);
+  health = inject(HealthService);
+  backupStatus = inject(BackupStatusService);
 
   navItems: NavItem[] = [
     { label: 'Календар', icon: 'calendar_month', route: '/calendar', alsoActive: ['/appointments'] },
@@ -37,6 +41,15 @@ export class ShellComponent {
     const url = this.router.url;
     if (url.startsWith(item.route)) return true;
     return item.alsoActive?.some(prefix => url.startsWith(prefix)) ?? false;
+  }
+
+  ngOnInit(): void {
+    this.health.startPolling();
+    this.backupStatus.load();
+  }
+
+  ngOnDestroy(): void {
+    this.health.stopPolling();
   }
 
   logout(): void {

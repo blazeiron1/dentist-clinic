@@ -6,7 +6,15 @@
       "Bash(curl -s -w \"\\\\n%{http_code}\" 'http://localhost:8080/api/v1/patients?page=0&size=10' -H 'Cookie: JSESSIONID=B33AD17155F84C8D5D6C86A77CD22C7F')",
       "Bash(ls \"C:\\\\Users\\\\kosto\\\\IdeaSnapshots\\\\dentistERP-BE/target/\"*.log)",
       "Bash(pg_isready -p 5433)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(d.get\\(''''timestamp'''',''''?''''\\), d.get\\(''''type'''',''''?''''\\)\\)\")",
+      "Bash(grep -o \"\"name\"\":\"\"[^\"\"]*\"\" C:/Users/kosto/AppData/Local/Temp/claude/C--Users-kosto-WebstormProjects-dentist-clinic/2ddb9857-5fe6-4db3-9dd5-a310e5036260/tasks/a507fcb63311aa235.output)",
+      "Bash(sc query:*)",
+      "Bash(net start:*)",
+      "Bash(\"C:/Program Files/PostgreSQL/18/bin/psql\" -h localhost -p 5432 -U dental -d dental_clinic -c \"SELECT 1;\")",
+      "Bash(PGPASSWORD=dental \"C:/Program Files/PostgreSQL/18/bin/psql\" -h localhost -p 5432 -U dental -d dental_clinic -c \"SELECT 1;\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(PGPASSWORD=dental \"C:/Program Files/PostgreSQL/18/bin/psql\" -h localhost -p 5432 -U dental -d dental_clinic -c \"UPDATE flyway_schema_history SET checksum = -146140502 WHERE version = '5';\")"
     ]
   }
 }

@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { PatientService } from '../../../core/services/patient.service';
 
 @Component({
@@ -21,6 +22,7 @@ export class PatientNewComponent {
   private patientSvc = inject(PatientService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private snackBar = inject(MatSnackBar);
 
   form = this.fb.group({
     firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -54,8 +56,17 @@ export class PatientNewComponent {
       dateOfBirth: this.formatDate(f.dateOfBirth),
       address: f.address || undefined,
       notes: f.notes || undefined,
-    }).subscribe(patient => {
-      this.router.navigate(['/patients', patient.id]);
+    }).subscribe({
+      next: patient => {
+        this.router.navigate(['/patients', patient.id]);
+      },
+      error: err => {
+        if (err.status === 409) {
+          this.snackBar.open(err.error?.detail || 'Пациент со овој ЕМБГ веќе постои', '', { duration: 5000 });
+        } else {
+          this.snackBar.open('Грешка при зачувување', '', { duration: 3000 });
+        }
+      },
     });
   }
 

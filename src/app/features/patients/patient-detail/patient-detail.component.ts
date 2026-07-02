@@ -27,7 +27,8 @@ import {
   Allergy, Condition, Medication, PatientDocument,
 } from '../../../core/models';
 import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
-import { letterheadHtml, letterheadStyles } from '../../../core/print-letterhead';
+import { ClinicInfoService } from '../../../core/services/clinic-info.service';
+import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../../core/print-letterhead';
 
 @Component({
   selector: 'app-patient-detail',
@@ -49,6 +50,8 @@ export class PatientDetailComponent implements OnInit {
   private apptSvc = inject(AppointmentService);
   private intSvc = inject(InterventionService);
   private docSvc = inject(DocumentService);
+  private clinicInfoSvc = inject(ClinicInfoService);
+  private logoBase64 = signal<string | undefined>(undefined);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
@@ -104,6 +107,7 @@ export class PatientDetailComponent implements OnInit {
         this.loadMedicalData(p.id);
         this.loadAppointments(p.id);
         this.loadDocuments(p.id);
+        fetchLogoAsBase64(this.clinicInfoSvc.clinicInfo().logoUrl).then(b64 => this.logoBase64.set(b64));
       },
       error: () => this.router.navigate(['/patients']),
     });
@@ -183,7 +187,7 @@ export class PatientDetailComponent implements OnInit {
 ${letterheadStyles()}
 </style>
 </head><body>
-${letterheadHtml()}
+${letterheadHtml(this.clinicInfoSvc.clinicInfo(), this.logoBase64())}
 <h1>Финансиски извештај — ${p.firstName} ${p.lastName}</h1>
 <p class="subtitle">${p.phone || ''} ${p.email ? '· ' + p.email : ''} · Печатено: ${fmtDate(new Date().toISOString())}</p>
 
@@ -277,9 +281,16 @@ ${interventions.length > 0 ? `
       address: f.address,
       notes: f.notes,
     };
-    this.patientSvc.update(p.id, dto).subscribe(updated => {
-      this.patient.set(updated);
-      this.editMode.set(false);
+    this.patientSvc.update(p.id, dto).subscribe({
+      next: updated => {
+        this.patient.set(updated);
+        this.editMode.set(false);
+      },
+      error: (err: any) => {
+        if (err.status === 409) {
+          this.editErrors.set({ embg: err.error?.detail || 'Пациент со овој ЕМБГ веќе постои' });
+        }
+      },
     });
   }
 

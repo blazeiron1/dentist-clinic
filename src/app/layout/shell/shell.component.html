@@ -36,6 +36,35 @@
   </mat-sidenav>
 
   <mat-sidenav-content class="main-content">
+    @if (health.status() === 'unreachable') {
+      <div class="system-banner error-banner">
+        <mat-icon>error</mat-icon>
+        <span>Серверот не е достапен. Проверете дали апликацијата работи правилно.</span>
+      </div>
+    }
+    @if (health.status() === 'degraded') {
+      <div class="system-banner warning-banner">
+        <mat-icon>warning</mat-icon>
+        <span>Базата на податоци не е достапна. Контактирајте поддршка.</span>
+      </div>
+    }
+    @if (backupStatus.status(); as bs) {
+      @if (bs.warningLevel !== 'ok' && !backupStatus.dismissed()) {
+        <div class="system-banner" [class.warning-banner]="bs.warningLevel === 'warning'" [class.error-banner]="bs.warningLevel === 'critical'">
+          <mat-icon>{{ bs.warningLevel === 'critical' ? 'error' : 'warning' }}</mat-icon>
+          <span>
+            @if (bs.daysSinceLastBackup < 0) {
+              Нема бекап! Направете бекап во Подесувања и зачувајте го на надворешен диск.
+            } @else {
+              Последен бекап: пред {{ bs.daysSinceLastBackup }} дена. Препорачуваме неделен бекап на надворешен диск.
+            }
+          </span>
+          <button mat-icon-button (click)="backupStatus.dismiss()" matTooltip="Отфрли">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      }
+    }
     <router-outlet />
   </mat-sidenav-content>
 </mat-sidenav-container>

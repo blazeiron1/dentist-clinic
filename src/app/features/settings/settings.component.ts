@@ -1,12 +1,18 @@
 import { Component, inject, signal, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { DatePipe } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
 import { BackupService, BackupInfo } from '../../core/services/backup.service';
+import { ClinicInfoService, ClinicInfo } from '../../core/services/clinic-info.service';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-settings',
@@ -14,12 +20,83 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
   imports: [
     MatCardModule, MatButtonModule, MatIconModule,
     MatDividerModule, MatProgressBarModule, MatSnackBarModule,
+    MatFormFieldModule, MatInputModule, ReactiveFormsModule,
     DatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page-container">
       <h1 class="page-title">Подесувања</h1>
+
+      <!-- Clinic Info Section -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>business</mat-icon>
+          <mat-card-title>Информации за клиниката</mat-card-title>
+          <mat-card-subtitle>Податоци кои се прикажуваат на извештаи и документи</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (clinicLoading()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+
+          <!-- Logo Upload -->
+          <div class="logo-section">
+            <div class="logo-preview" (click)="logoInput.click()">
+              @if (logoPreview()) {
+                <img [src]="logoPreview()" alt="Лого" />
+              } @else {
+                <mat-icon>add_photo_alternate</mat-icon>
+                <span>Додај лого</span>
+              }
+            </div>
+            <div class="logo-actions">
+              <button mat-stroked-button type="button" (click)="logoInput.click()" [disabled]="clinicLoading()">
+                <mat-icon>upload</mat-icon>
+                {{ logoPreview() ? 'Промени лого' : 'Прикачи лого' }}
+              </button>
+              <span class="logo-hint">JPG, PNG, SVG или WebP</span>
+            </div>
+            <input #logoInput type="file" accept="image/jpeg,image/png,image/svg+xml,image/webp" hidden
+                   (change)="onLogoSelected($event)" />
+          </div>
+
+          <mat-divider />
+
+          <form [formGroup]="clinicForm" (ngSubmit)="saveClinicInfo()" class="clinic-form">
+            <mat-form-field appearance="outline">
+              <mat-label>Име на клиниката</mat-label>
+              <input matInput formControlName="name" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Адреса</mat-label>
+              <input matInput formControlName="address" />
+            </mat-form-field>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Телефон</mat-label>
+                <input matInput formControlName="phone" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Е-пошта</mat-label>
+                <input matInput formControlName="email" type="email" />
+              </mat-form-field>
+            </div>
+
+            <div class="form-actions">
+              <button mat-flat-button color="primary" type="submit"
+                      [disabled]="clinicLoading() || clinicForm.invalid || clinicForm.pristine">
+                <mat-icon>save</mat-icon>
+                Зачувај
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
 
       <!-- Backup Section -->
       <mat-card class="section-card">
@@ -79,6 +156,33 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
     .section-card { margin-bottom: 24px; }
     .section-card mat-card-header { margin-bottom: 16px; }
     .section-subtitle { margin: 16px 0 8px; font-size: 14px; color: rgba(0,0,0,.6); }
+    .logo-section {
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 16px;
+    }
+    .logo-preview {
+      width: 80px; height: 80px;
+      border: 2px dashed rgba(0,0,0,.2);
+      border-radius: 8px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      &:hover { border-color: var(--mat-sys-primary); }
+      img { width: 100%; height: 100%; object-fit: contain; }
+      mat-icon { color: rgba(0,0,0,.3); font-size: 32px; width: 32px; height: 32px; }
+      span { font-size: 11px; color: rgba(0,0,0,.4); }
+    }
+    .logo-actions { display: flex; flex-direction: column; gap: 4px; }
+    .logo-actions button mat-icon { margin-right: 4px; }
+    .logo-hint { font-size: 12px; color: rgba(0,0,0,.4); }
+    .clinic-form { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; }
+    .clinic-form mat-form-field { width: 100%; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row mat-form-field { flex: 1; }
+    .form-actions { display: flex; justify-content: flex-end; }
+    .form-actions button mat-icon { margin-right: 4px; }
     .backup-actions { display: flex; gap: 12px; margin-bottom: 16px; }
     .backup-actions button mat-icon { margin-right: 4px; }
     mat-divider { margin: 8px 0; }
@@ -97,13 +201,64 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
 })
 export class SettingsComponent implements OnInit {
   private backupSvc = inject(BackupService);
+  private clinicInfoSvc = inject(ClinicInfoService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private fb = inject(FormBuilder);
 
   backups = signal<BackupInfo[]>([]);
   loading = signal(false);
+  clinicLoading = signal(false);
+  logoPreview = signal<string | null>(null);
+
+  clinicForm = this.fb.nonNullable.group({
+    name: ['', Validators.required],
+    address: [''],
+    phone: [''],
+    email: [''],
+  });
 
   ngOnInit(): void {
     this.loadBackups();
+    this.loadClinicInfo();
+  }
+
+  onLogoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.clinicLoading.set(true);
+    this.clinicInfoSvc.uploadLogo(file).subscribe({
+      next: info => {
+        this.logoPreview.set(info.logoUrl + '?t=' + Date.now());
+        this.snackBar.open('Логото е прикачено', '', { duration: 3000 });
+        this.clinicLoading.set(false);
+      },
+      error: () => {
+        this.snackBar.open('Грешка при прикачување на лого', '', { duration: 3000 });
+        this.clinicLoading.set(false);
+      },
+    });
+    input.value = '';
+  }
+
+  saveClinicInfo(): void {
+    if (this.clinicForm.invalid) return;
+    this.clinicLoading.set(true);
+    const formValue = this.clinicForm.getRawValue();
+    const info: ClinicInfo = { ...formValue, logoUrl: this.clinicInfoSvc.clinicInfo().logoUrl };
+    this.clinicInfoSvc.update(info).subscribe({
+      next: () => {
+        this.snackBar.open('Информациите се зачувани', '', { duration: 3000 });
+        this.clinicForm.markAsPristine();
+        this.clinicLoading.set(false);
+      },
+      error: () => {
+        this.snackBar.open('Грешка при зачувување', '', { duration: 3000 });
+        this.clinicLoading.set(false);
+      },
+    });
   }
 
   createBackup(): void {
@@ -134,25 +289,31 @@ export class SettingsComponent implements OnInit {
     const file = input.files?.[0];
     if (!file) return;
 
-    const confirmed = confirm(
-      'ВНИМАНИЕ: Обновата ќе ги замени сите постоечки податоци.\n\nДали сте сигурни?'
-    );
-    if (!confirmed) {
-      input.value = '';
-      return;
-    }
-
-    this.loading.set(true);
-    this.backupSvc.restore(file).subscribe({
-      next: () => {
-        this.snackBar.open('Обновата е завршена. Рестартирајте ја апликацијата.', '', { duration: 5000 });
-        this.loading.set(false);
-        this.loadBackups();
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '440px',
+      data: {
+        title: 'Обнова од бекап',
+        message: 'ВНИМАНИЕ: Обновата ќе ги замени сите постоечки податоци. Дали сте сигурни?',
+        confirmText: 'Обнови',
+        warn: true,
       },
-      error: () => {
-        this.snackBar.open('Грешка при обнова', '', { duration: 3000 });
-        this.loading.set(false);
-      },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) {
+        input.value = '';
+        return;
+      }
+      this.loading.set(true);
+      this.backupSvc.restore(file).subscribe({
+        next: () => {
+          this.snackBar.open('Обновата е завршена. Страницата ќе се рестартира...', '', { duration: 3000 });
+          setTimeout(() => window.location.href = '/login', 2000);
+        },
+        error: () => {
+          this.snackBar.open('Грешка при обнова', '', { duration: 3000 });
+          this.loading.set(false);
+        },
+      });
     });
     input.value = '';
   }
@@ -161,6 +322,21 @@ export class SettingsComponent implements OnInit {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  private loadClinicInfo(): void {
+    this.clinicLoading.set(true);
+    this.clinicInfoSvc.load().subscribe({
+      next: info => {
+        this.clinicForm.patchValue(info);
+        this.clinicForm.markAsPristine();
+        if (info.logoUrl) {
+          this.logoPreview.set(info.logoUrl);
+        }
+        this.clinicLoading.set(false);
+      },
+      error: () => this.clinicLoading.set(false),
+    });
   }
 
   private loadBackups(): void {

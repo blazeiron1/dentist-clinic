@@ -16,9 +16,10 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { ReportService, OutstandingBalance, PatientFinancialReport } from '../../core/services/report.service';
+import { ClinicInfoService } from '../../core/services/clinic-info.service';
 import { PatientService } from '../../core/services/patient.service';
 import { ReportData, Patient } from '../../core/models';
-import { letterheadHtml, letterheadStyles } from '../../core/print-letterhead';
+import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../core/print-letterhead';
 import * as XLSX from 'xlsx';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, filter } from 'rxjs/operators';
@@ -46,6 +47,8 @@ const EMPTY_REPORT: ReportData = {
 export class ReportsComponent implements OnInit {
   private reportSvc = inject(ReportService);
   private patientSvc = inject(PatientService);
+  private clinicInfoSvc = inject(ClinicInfoService);
+  private logoBase64 = signal<string | undefined>(undefined);
 
   range = signal<Range>('month');
   data = signal<ReportData>(EMPTY_REPORT);
@@ -133,6 +136,7 @@ export class ReportsComponent implements OnInit {
     this.loadReport(this.range());
     this.loadOutstanding();
     this.loadAllPatients();
+    fetchLogoAsBase64(this.clinicInfoSvc.clinicInfo().logoUrl).then(b64 => this.logoBase64.set(b64));
   }
 
   private formatDate(d: Date | null): string {
@@ -304,7 +308,7 @@ export class ReportsComponent implements OnInit {
 ${letterheadStyles()}
 </style>
 </head><body>
-${letterheadHtml()}
+${letterheadHtml(this.clinicInfoSvc.clinicInfo(), this.logoBase64())}
 <h1>${title}</h1>
 <p class="subtitle">Печатено: ${fmtNow}</p>
 ${body}

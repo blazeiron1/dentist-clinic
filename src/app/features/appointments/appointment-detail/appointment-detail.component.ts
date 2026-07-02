@@ -29,6 +29,7 @@ import { STATUS_LABELS, INTERVENTION_COLORS, APPOINTMENT_STATUSES } from '../../
 import { ToothChartComponent } from '../../../shared/components/tooth-chart';
 import { ToothPickerDialogComponent } from './tooth-picker-dialog.component';
 import { PaymentDialogComponent } from './payment-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 interface DraftIntervention {
   name: string;
@@ -139,8 +140,23 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   setStatus(status: AppointmentStatus): void {
     if (status === 'cancelled' || status === 'no-show') {
       const label = status === 'cancelled' ? 'откажана' : 'не дојде';
-      const confirmed = confirm(`Дали сте сигурни дека сакате да го промените статусот во "${label}"?`);
-      if (!confirmed) return;
+      const ref = this.dialog.open(ConfirmDialogComponent, {
+        width: '400px',
+        data: {
+          title: 'Промена на статус',
+          message: `Дали сте сигурни дека сакате да го промените статусот во "${label}"?`,
+          confirmText: 'Промени',
+          warn: true,
+        },
+      });
+      ref.afterClosed().subscribe(confirmed => {
+        if (!confirmed) return;
+        const a = this.appointment()!;
+        this.apptSvc.updateStatus(a.id, status).subscribe(updated => {
+          this.appointment.set(updated);
+        });
+      });
+      return;
     }
     const a = this.appointment()!;
     this.apptSvc.updateStatus(a.id, status).subscribe(updated => {
@@ -168,13 +184,22 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   onDraftCatalogSelect(item: CatalogItem): void {
     const d = this.draft();
     if (d && d.price > 0 && d.price !== item.lastPrice) {
-      const confirmed = confirm(
-        `Цената ќе се промени од ${d.price} на ${item.lastPrice} ден. Продолжи?`
-      );
-      if (!confirmed) {
-        this.draft.update(d => d ? { ...d, name: item.name } : d);
-        return;
-      }
+      const ref = this.dialog.open(ConfirmDialogComponent, {
+        width: '400px',
+        data: {
+          title: 'Промена на цена',
+          message: `Цената ќе се промени од ${d.price} на ${item.lastPrice} ден. Продолжи?`,
+          confirmText: 'Промени',
+        },
+      });
+      ref.afterClosed().subscribe(confirmed => {
+        if (!confirmed) {
+          this.draft.update(d => d ? { ...d, name: item.name } : d);
+        } else {
+          this.draft.update(d => d ? { ...d, name: item.name, price: item.lastPrice } : d);
+        }
+      });
+      return;
     }
     this.draft.update(d => d ? { ...d, name: item.name, price: item.lastPrice } : d);
   }
