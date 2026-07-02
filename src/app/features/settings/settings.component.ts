@@ -5,8 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatChipsModule } from '@angular/material/chips';
 import { DatePipe } from '@angular/common';
 import { BackupService, BackupInfo } from '../../core/services/backup.service';
+import { AuditService, AuditLog } from '../../core/services/audit.service';
 
 @Component({
   selector: 'app-settings',
@@ -14,6 +18,7 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
   imports: [
     MatCardModule, MatButtonModule, MatIconModule,
     MatDividerModule, MatProgressBarModule, MatSnackBarModule,
+    MatTableModule, MatPaginatorModule, MatChipsModule,
     DatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -71,6 +76,78 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
           </div>
         </mat-card-content>
       </mat-card>
+
+      <!-- Audit Log Section -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>history</mat-icon>
+          <mat-card-title>Евиденција на активности</mat-card-title>
+          <mat-card-subtitle>Преглед на сите акции во системот</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="backup-actions">
+            <button mat-flat-button color="primary" (click)="sendLogs()" [disabled]="exporting()">
+              <mat-icon>email</mat-icon>
+              Испрати логови на поддршка
+            </button>
+          </div>
+
+          @if (exporting()) {
+            <mat-progress-bar mode="indeterminate" />
+          }
+
+          @if (auditLogs().length === 0 && !auditLoading()) {
+            <p class="empty-text">Нема записи</p>
+          }
+
+          @if (auditLogs().length > 0) {
+            <table mat-table [dataSource]="auditLogs()" class="audit-table">
+              <ng-container matColumnDef="createdAt">
+                <th mat-header-cell *matHeaderCellDef>Време</th>
+                <td mat-cell *matCellDef="let row">{{ row.createdAt | date:'d.M.y HH:mm' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="username">
+                <th mat-header-cell *matHeaderCellDef>Корисник</th>
+                <td mat-cell *matCellDef="let row">{{ row.username }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="action">
+                <th mat-header-cell *matHeaderCellDef>Акција</th>
+                <td mat-cell *matCellDef="let row">
+                  <mat-chip-set>
+                    <mat-chip [class]="'action-' + row.action.toLowerCase()" highlighted>
+                      {{ actionLabel(row.action) }}
+                    </mat-chip>
+                  </mat-chip-set>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="entity">
+                <th mat-header-cell *matHeaderCellDef>Ентитет</th>
+                <td mat-cell *matCellDef="let row">{{ entityLabel(row.entityType) }} {{ row.entityId ? '#' + row.entityId : '' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="details">
+                <th mat-header-cell *matHeaderCellDef>Детали</th>
+                <td mat-cell *matCellDef="let row" class="details-cell">{{ row.details || '-' }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="auditColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: auditColumns;"></tr>
+            </table>
+
+            <mat-paginator
+              [length]="auditTotal()"
+              [pageSize]="20"
+              [pageIndex]="auditPage()"
+              [pageSizeOptions]="[10, 20, 50]"
+              (page)="onAuditPage($event)"
+              showFirstLastButtons />
+          }
+        </mat-card-content>
+      </mat-card>
     </div>
   `,
   styles: [`
@@ -93,18 +170,37 @@ import { BackupService, BackupInfo } from '../../core/services/backup.service';
     .backup-info { flex: 1; display: flex; flex-direction: column; }
     .backup-name { font-size: 14px; font-weight: 500; }
     .backup-meta { font-size: 12px; color: rgba(0,0,0,.5); }
+
+    .audit-table { width: 100%; }
+    .details-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .action-create { --mdc-chip-label-text-color: #2e7d32; --mdc-chip-elevated-container-color: #e8f5e9; }
+    .action-update { --mdc-chip-label-text-color: #1565c0; --mdc-chip-elevated-container-color: #e3f2fd; }
+    .action-delete { --mdc-chip-label-text-color: #c62828; --mdc-chip-elevated-container-color: #ffebee; }
+    mat-paginator { margin-top: 8px; }
   `],
 })
 export class SettingsComponent implements OnInit {
   private backupSvc = inject(BackupService);
+  private auditSvc = inject(AuditService);
   private snackBar = inject(MatSnackBar);
 
   backups = signal<BackupInfo[]>([]);
   loading = signal(false);
 
+  auditLogs = signal<AuditLog[]>([]);
+  auditTotal = signal(0);
+  auditPage = signal(0);
+  auditLoading = signal(false);
+  exporting = signal(false);
+
+  auditColumns = ['createdAt', 'username', 'action', 'entity', 'details'];
+
   ngOnInit(): void {
     this.loadBackups();
+    this.loadAuditLogs(0, 20);
   }
+
+  // --- Backup ---
 
   createBackup(): void {
     this.loading.set(true);
@@ -163,8 +259,72 @@ export class SettingsComponent implements OnInit {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  // --- Audit ---
+
+  onAuditPage(event: PageEvent): void {
+    this.auditPage.set(event.pageIndex);
+    this.loadAuditLogs(event.pageIndex, event.pageSize);
+  }
+
+  sendLogs(): void {
+    this.exporting.set(true);
+    this.auditSvc.exportBundle().subscribe({
+      next: blob => {
+        this.triggerDownload(blob, `dental-clinic-logs_${this.timestamp()}.zip`);
+        this.exporting.set(false);
+        const recipients = 'kostoskid66@gmail.com,blagoja663@gmail.com';
+        const subject = encodeURIComponent('Dental Clinic - Логови');
+        const body = encodeURIComponent(
+          'Здраво,\n\nВо прилог се логовите од Dental Clinic апликацијата.\n\nВе молам прикачете го преземениот фајл: dental-clinic-logs_' + this.timestamp() + '.zip'
+        );
+        window.open(`mailto:${recipients}?subject=${subject}&body=${body}`, '_self');
+      },
+      error: () => {
+        this.snackBar.open('Грешка при преземање логови', '', { duration: 3000 });
+        this.exporting.set(false);
+      },
+    });
+  }
+
+  actionLabel(action: string): string {
+    const labels: Record<string, string> = {
+      'CREATE': 'Креирање',
+      'UPDATE': 'Измена',
+      'DELETE': 'Бришење',
+      'COMPLETE': 'Завршено',
+      'CANCEL': 'Откажано',
+    };
+    return labels[action] || action;
+  }
+
+  entityLabel(entityType: string): string {
+    const labels: Record<string, string> = {
+      'PATIENT': 'Пациент',
+      'APPOINTMENT': 'Термин',
+      'INTERVENTION': 'Интервенција',
+      'PAYMENT': 'Плаќање',
+      'DOCUMENT': 'Документ',
+      'BACKUP': 'Бекап',
+    };
+    return labels[entityType] || entityType;
+  }
+
+  // --- Private ---
+
   private loadBackups(): void {
     this.backupSvc.list().subscribe(list => this.backups.set(list));
+  }
+
+  private loadAuditLogs(page: number, size: number): void {
+    this.auditLoading.set(true);
+    this.auditSvc.getAll(page, size).subscribe({
+      next: res => {
+        this.auditLogs.set(res.content);
+        this.auditTotal.set(res.totalElements);
+        this.auditLoading.set(false);
+      },
+      error: () => this.auditLoading.set(false),
+    });
   }
 
   private triggerDownload(blob: Blob, filename: string): void {
