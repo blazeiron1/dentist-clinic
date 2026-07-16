@@ -1,4 +1,16 @@
 <div class="tooth-chart-wrapper" [class.readonly]="readonly()">
+  @if (!readonly()) {
+    <div class="bulk-select-bar">
+      <button class="bulk-btn" [class.active]="isGroupFullySelected(UPPER_JAW)"
+              (click)="toggleGroup(UPPER_JAW)">Горна вилица</button>
+      <button class="bulk-btn" [class.active]="isGroupFullySelected(LOWER_JAW)"
+              (click)="toggleGroup(LOWER_JAW)">Долна вилица</button>
+      <button class="bulk-btn" [class.active]="isGroupFullySelected(LEFT_SIDE)"
+              (click)="toggleGroup(LEFT_SIDE)">Лево</button>
+      <button class="bulk-btn" [class.active]="isGroupFullySelected(RIGHT_SIDE)"
+              (click)="toggleGroup(RIGHT_SIDE)">Десно</button>
+    </div>
+  }
   <svg [attr.viewBox]="'0 0 ' + svgW + ' ' + svgH"
        [attr.width]="svgW" [attr.height]="svgH"
        class="tooth-svg" role="group" aria-label="Dental chart">

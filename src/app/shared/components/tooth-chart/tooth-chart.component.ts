@@ -108,10 +108,35 @@ export class ToothChartComponent {
   protected readonly svgH = SVG_H;
   protected readonly midX = SVG_W / 2;
 
+  protected readonly UPPER_JAW = [...UPPER_RIGHT, ...UPPER_LEFT];
+  protected readonly LOWER_JAW = [...LOWER_RIGHT, ...LOWER_LEFT];
+  protected readonly RIGHT_SIDE = [...UPPER_RIGHT, ...LOWER_RIGHT];
+  protected readonly LEFT_SIDE = [...UPPER_LEFT, ...LOWER_LEFT];
+
   protected isSelected = computed(() => {
     const set = new Set(this.selectedTeeth());
     return (id: number) => set.has(id);
   });
+
+  protected isGroupFullySelected(group: number[]): boolean {
+    const set = new Set(this.selectedTeeth());
+    return group.every(id => set.has(id));
+  }
+
+  protected toggleGroup(group: number[]): void {
+    if (this.readonly()) return;
+    const current = this.selectedTeeth();
+    const currentSet = new Set(current);
+    const allSelected = group.every(id => currentSet.has(id));
+
+    if (allSelected) {
+      const removeSet = new Set(group);
+      this.selectedTeeth.set(current.filter(id => !removeSet.has(id)));
+    } else {
+      const merged = new Set([...current, ...group]);
+      this.selectedTeeth.set([...merged]);
+    }
+  }
 
   protected interventionColor(id: number): string | null {
     return this.interventionTeeth().get(id) ?? null;

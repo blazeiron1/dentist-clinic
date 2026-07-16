@@ -4,8 +4,44 @@
 
 .tooth-chart-wrapper {
   display: inline-flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   user-select: none;
+}
+
+// ── Bulk select bar ─────────────────────────────────────────────────────────
+.bulk-select-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.bulk-btn {
+  border: 1.5px solid #b0bec5;
+  background: #fff;
+  color: #546e7a;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+
+  &:hover {
+    border-color: #1976d2;
+    color: #1976d2;
+    background: #e3f2fd;
+  }
+
+  &.active {
+    background: #1976d2;
+    border-color: #1976d2;
+    color: #fff;
+  }
 }
 
 .tooth-svg {
