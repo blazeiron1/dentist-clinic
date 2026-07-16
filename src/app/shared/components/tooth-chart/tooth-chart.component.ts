@@ -21,16 +21,82 @@ const SVG_H = 550;
 const UPPER = { cx: 250, cy: 200, rx: 185, ry: 168 };
 const LOWER = { cx: 250, cy: 350, rx: 175, ry: 152 };
 
-// Tooth dimensions by FDI last digit
-const DIMS: Record<number, { w: number; h: number; r: number }> = {
-  1: { w: 15, h: 13, r: 3 },
-  2: { w: 13, h: 15, r: 3 },
-  3: { w: 14, h: 19, r: 5 },
-  4: { w: 18, h: 17, r: 4 },
-  5: { w: 20, h: 18, r: 4 },
-  6: { w: 27, h: 25, r: 5 },
-  7: { w: 26, h: 24, r: 5 },
-  8: { w: 22, h: 21, r: 5 },
+// Occlusal tooth shapes per FDI last digit (1-8)
+// Centered at (0,0). Local coords: x = mesio-distal, y = bucco-lingual (neg y = buccal/labial = outward)
+interface ToothShape {
+  outline: string;
+  grooves: string[];
+  w: number;
+  h: number;
+}
+
+const SHAPES: Record<number, ToothShape> = {
+  // Central incisor: wide shovel shape, flat incisal edge
+  1: {
+    outline: 'M-5.5,-5 L5.5,-5 C6.5,-5 7,-3.5 7,-1 L6.5,4 C6,6 3.5,7 0,7 C-3.5,7 -6,6 -6.5,4 L-7,-1 C-7,-3.5 -6.5,-5 -5.5,-5 Z',
+    grooves: ['M-3.5,3 Q0,1 3.5,3'],
+    w: 14, h: 12,
+  },
+  // Lateral incisor: narrower, slightly rounded
+  2: {
+    outline: 'M-4.5,-5.5 L4.5,-5.5 C5.5,-5.5 6,-4 6,-2 L5.5,4 C5,6 3,7 0,7 C-3,7 -5,6 -5.5,4 L-6,-2 C-6,-4 -5.5,-5.5 -4.5,-5.5 Z',
+    grooves: ['M-3,3.5 Q0,1.5 3,3.5'],
+    w: 12, h: 12.5,
+  },
+  // Canine: diamond/shield with prominent cusp tip
+  3: {
+    outline: 'M0,-9.5 C3.5,-8 5.5,-4.5 6,0 C6.5,4.5 4,7.5 2,8.5 L-2,8.5 C-4,7.5 -6.5,4.5 -6,0 C-5.5,-4.5 -3.5,-8 0,-9.5 Z',
+    grooves: ['M0,-5.5 Q0.5,0 0,6'],
+    w: 12, h: 18,
+  },
+  // First premolar: oval with two cusps
+  4: {
+    outline: 'M0,-8 C5,-8 7.5,-5 7.5,0 C7.5,5 5,8 0,8 C-5,8 -7.5,5 -7.5,0 C-7.5,-5 -5,-8 0,-8 Z',
+    grooves: [
+      'M-6,0 C-3,-2.5 3,-2.5 6,0',
+      'M0,-5.5 C0.5,-1 0.5,1 0,5.5',
+    ],
+    w: 15, h: 16,
+  },
+  // Second premolar: rounder, Y-groove
+  5: {
+    outline: 'M0,-8.5 C5.5,-8.5 8,-5 8,0 C8,5 5.5,8.5 0,8.5 C-5.5,8.5 -8,5 -8,0 C-8,-5 -5.5,-8.5 0,-8.5 Z',
+    grooves: [
+      'M-6.5,0 C-3,-2 3,-2 6.5,0',
+      'M0,-6 C0.5,-1 0.5,1 0,6',
+    ],
+    w: 16, h: 17,
+  },
+  // First molar: largest, rhomboidal with H-fissure
+  6: {
+    outline: 'M-6,-10.5 C-2,-12 3,-12 7,-10.5 C10.5,-8 11.5,-4 11.5,0 C11.5,5 10.5,9 7,11 C3,12.5 -2,12.5 -6,11 C-10.5,9 -11.5,5 -11.5,0 C-11.5,-4 -10.5,-8 -6,-10.5 Z',
+    grooves: [
+      'M-9.5,0 C-5,-3 5,-3 9.5,0',
+      'M-1,-10 C-1.5,-4 -1.5,4 -1,10',
+      'M-8,-6 C-5.5,-3.5 -3.5,-2 -1.5,-0.5',
+      'M8,-6 C5.5,-3.5 3.5,-2 1,-0.5',
+    ],
+    w: 23, h: 24,
+  },
+  // Second molar: slightly smaller
+  7: {
+    outline: 'M-5.5,-9.5 C-1.5,-11 2,-11 6,-9.5 C9.5,-7.5 10.5,-3.5 10.5,0 C10.5,4.5 9.5,8 6,10 C2,11.5 -1.5,11.5 -5.5,10 C-9.5,8 -10.5,4.5 -10.5,0 C-10.5,-3.5 -9.5,-7.5 -5.5,-9.5 Z',
+    grooves: [
+      'M-8.5,0 C-4,-2.5 4,-2.5 8.5,0',
+      'M-0.5,-9 C-1,-3 -1,3 -0.5,9',
+      'M7,-5.5 C4.5,-3 2.5,-1.5 0.5,-0.5',
+    ],
+    w: 21, h: 22,
+  },
+  // Third molar: smallest molar, irregular shape
+  8: {
+    outline: 'M-4.5,-8 C0,-9.5 4.5,-8.5 7,-6 C9,-3.5 9.5,0 9,3.5 C8.5,7 5.5,9 2,9 C-1.5,9.5 -5.5,8.5 -7.5,5.5 C-9.5,2.5 -9.5,-1 -8.5,-4 C-7.5,-7 -4.5,-8 -4.5,-8 Z',
+    grooves: [
+      'M-7,0.5 C-3,-1.5 3.5,-1 7,0.5',
+      'M-0.5,-7 C-1,-2 -0.5,2 0,7',
+    ],
+    w: 19, h: 18.5,
+  },
 };
 
 export interface ToothPos {
@@ -40,12 +106,11 @@ export interface ToothPos {
   rot: number;
   w: number;
   h: number;
-  r: number;
   pos: number;
   labelX: number;
   labelY: number;
-  grooveH: string;
-  grooveV: string;
+  outline: string;
+  grooves: string[];
 }
 
 function buildTeeth(
@@ -62,23 +127,24 @@ function buildTeeth(
     const cx = Math.round(arch.cx + arch.rx * Math.cos(rad));
     const cy = Math.round(arch.cy + arch.ry * Math.sin(rad));
     const pos = id % 10;
-    const dim = DIMS[pos];
+    const shape = SHAPES[pos];
 
     // Label offset: outward from arch center
     const dx = cx - arch.cx;
     const dy = cy - arch.cy;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const labelDist = Math.max(dim.w, dim.h) / 2 + 13;
+    const labelDist = Math.max(shape.w, shape.h) / 2 + 13;
     const labelX = Math.round(cx + (dx / dist) * labelDist);
     const labelY = Math.round(cy + (dy / dist) * labelDist);
 
-    // Groove paths (curved for natural look)
-    const hw = dim.w * 0.32;
-    const hh = dim.h * 0.32;
-    const grooveH = `M${-hw},${dim.h * 0.04} Q0,${-dim.h * 0.08} ${hw},${dim.h * 0.04}`;
-    const grooveV = `M${-dim.w * 0.04},${-hh} Q${dim.w * 0.06},0 ${-dim.w * 0.04},${hh}`;
-
-    return { id, cx, cy, rot: deg + 90, w: dim.w, h: dim.h, r: dim.r, pos, labelX, labelY, grooveH, grooveV };
+    return {
+      id, cx, cy,
+      rot: deg + 90,
+      w: shape.w, h: shape.h,
+      pos, labelX, labelY,
+      outline: shape.outline,
+      grooves: shape.grooves,
+    };
   });
 }
 

@@ -5,6 +5,7 @@
               (click)="toggleGroup(UPPER_JAW)">Горна вилица</button>
       <button class="bulk-btn" [class.active]="isGroupFullySelected(LOWER_JAW)"
               (click)="toggleGroup(LOWER_JAW)">Долна вилица</button>
+      <span class="bulk-divider"></span>
       <button class="bulk-btn" [class.active]="isGroupFullySelected(LEFT_SIDE)"
               (click)="toggleGroup(LEFT_SIDE)">Лево</button>
       <button class="bulk-btn" [class.active]="isGroupFullySelected(RIGHT_SIDE)"
@@ -43,32 +44,21 @@
 
         <!-- Rotated tooth shape -->
         <g [attr.transform]="'translate(' + t.cx + ',' + t.cy + ') rotate(' + t.rot + ')'">
-          <!-- Selection ring -->
+          <!-- Selection ring (scaled outline) -->
           @if (sel) {
-            <rect [attr.x]="-(t.w / 2 + 4)" [attr.y]="-(t.h / 2 + 4)"
-                  [attr.width]="t.w + 8" [attr.height]="t.h + 8"
-                  [attr.rx]="t.r + 2" class="selection-ring" />
+            <g transform="scale(1.18)">
+              <path [attr.d]="t.outline" class="selection-ring" />
+            </g>
           }
 
           <!-- Tooth body -->
-          <rect [attr.x]="-(t.w / 2)" [attr.y]="-(t.h / 2)"
-                [attr.width]="t.w" [attr.height]="t.h"
-                [attr.rx]="t.r" class="tooth-body"
+          <path [attr.d]="t.outline" class="tooth-body"
                 [style.fill]="iColor ? iColor + '44' : null"
                 [style.stroke]="iColor ?? null" />
 
-          <!-- Molar grooves (cross pattern) -->
-          @if (t.pos >= 6) {
-            <path [attr.d]="t.grooveH" class="groove" />
-            <path [attr.d]="t.grooveV" class="groove" />
-          }
-          <!-- Premolar groove (horizontal line) -->
-          @if (t.pos === 4 || t.pos === 5) {
-            <path [attr.d]="t.grooveH" class="groove" />
-          }
-          <!-- Canine dot -->
-          @if (t.pos === 3) {
-            <circle cx="0" cy="0" r="2.5" class="groove-dot" />
+          <!-- Fissure/groove patterns -->
+          @for (groove of t.grooves; track $index) {
+            <path [attr.d]="groove" class="groove" />
           }
         </g>
 
@@ -80,5 +70,4 @@
       </g>
     }
   </svg>
-
 </div>

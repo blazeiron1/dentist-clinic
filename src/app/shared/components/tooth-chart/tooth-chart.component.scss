@@ -17,6 +17,7 @@
   margin-bottom: 8px;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
 }
 
 .bulk-btn {
@@ -44,13 +45,21 @@
   }
 }
 
+.bulk-divider {
+  width: 1px;
+  height: 20px;
+  background: #cfd8dc;
+  margin: 0 4px;
+}
+
+// ── SVG canvas ──────────────────────────────────────────────────────────────
 .tooth-svg {
   overflow: visible;
   max-width: 100%;
   height: auto;
 }
 
-// ── Divider & labels ─────────────────────────────────────────────────────────
+// ── Divider & labels ────────────────────────────────────────────────────────
 .divider {
   stroke: #cfd8dc;
   stroke-width: 1;
@@ -64,15 +73,15 @@
   font-family: inherit;
 }
 
-// ── Tooth group ──────────────────────────────────────────────────────────────
+// ── Tooth group ─────────────────────────────────────────────────────────────
 .tooth-group {
   cursor: pointer;
   outline: none;
-  transition: opacity 0.15s;
 
   &:hover .tooth-body {
     fill: #e3f2fd;
     stroke: #1976d2;
+    stroke-width: 2;
   }
 
   &:focus-visible .tooth-body {
@@ -83,19 +92,15 @@
   &.readonly {
     cursor: default;
     pointer-events: none;
-
-    &:hover .tooth-body {
-      fill: inherit;
-      stroke: inherit;
-    }
   }
 }
 
-// ── Tooth body ───────────────────────────────────────────────────────────────
+// ── Tooth body (SVG path) ───────────────────────────────────────────────────
 .tooth-body {
-  fill: #fff;
+  fill: #fafafa;
   stroke: #546e7a;
   stroke-width: 1.5;
+  stroke-linejoin: round;
   transition: fill 0.15s, stroke 0.15s;
 }
 
@@ -105,16 +110,17 @@
   stroke-width: 2;
 }
 
-// ── Selection ring ───────────────────────────────────────────────────────────
+// ── Selection ring ──────────────────────────────────────────────────────────
 .selection-ring {
   fill: none;
   stroke: #1976d2;
-  stroke-width: 1.5;
+  stroke-width: 1.2;
   stroke-dasharray: 3 3;
-  opacity: 0.7;
+  stroke-linejoin: round;
+  opacity: 0.55;
 }
 
-// ── Groove marks ─────────────────────────────────────────────────────────────
+// ── Groove/fissure marks ────────────────────────────────────────────────────
 .groove {
   fill: none;
   stroke: #b0bec5;
@@ -123,19 +129,15 @@
   pointer-events: none;
 }
 
-.groove-dot {
-  fill: none;
-  stroke: #b0bec5;
-  stroke-width: 0.8;
-  pointer-events: none;
-}
-
-.tooth-group.selected .groove,
-.tooth-group.selected .groove-dot {
+.tooth-group:hover .groove {
   stroke: #90caf9;
 }
 
-// ── FDI label ────────────────────────────────────────────────────────────────
+.tooth-group.selected .groove {
+  stroke: #90caf9;
+}
+
+// ── FDI label ───────────────────────────────────────────────────────────────
 .tooth-label {
   font-size: 9px;
   fill: #546e7a;
@@ -151,39 +153,7 @@
   font-weight: 700;
 }
 
-// ── Selection summary ────────────────────────────────────────────────────────
-.selection-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 6px 10px;
-  background: #e3f2fd;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #1565c0;
-}
-
-.selection-label {
-  flex: 1;
-}
-
-.clear-btn {
-  border: none;
-  background: transparent;
-  color: #1565c0;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-
-  &:hover {
-    background: #bbdefb;
-  }
-}
-
-// ── Read-only ────────────────────────────────────────────────────────────────
+// ── Read-only ───────────────────────────────────────────────────────────────
 .tooth-chart-wrapper.readonly .tooth-group {
   cursor: default;
 }
