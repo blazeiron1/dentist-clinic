@@ -11,13 +11,14 @@ export function letterheadStyles(): string {
 export function letterheadHtml(clinicInfo: ClinicInfo, logoBase64?: string): string {
   const c = clinicInfo;
   const logoSrc = logoBase64 || c.logoUrl;
+  const contactParts = [c.phone, c.email].filter(Boolean);
   return `
   <div class="letterhead">
     ${logoSrc ? `<img class="letterhead-logo" src="${logoSrc}" alt="${c.name}" />` : ''}
     <div>
-      <div class="letterhead-name">${c.name}</div>
-      <div class="letterhead-detail">${c.address}</div>
-      <div class="letterhead-detail">${c.phone} &middot; ${c.email}</div>
+      ${c.name ? `<div class="letterhead-name">${c.name}</div>` : ''}
+      ${c.address ? `<div class="letterhead-detail">${c.address}</div>` : ''}
+      ${contactParts.length ? `<div class="letterhead-detail">${contactParts.join(' &middot; ')}</div>` : ''}
     </div>
   </div>`;
 }

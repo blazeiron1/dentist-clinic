@@ -24,8 +24,12 @@ import { PatientService } from '../../../core/services/patient.service';
 import { InterventionService } from '../../../core/services/intervention.service';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { PaymentService } from '../../../core/services/payment.service';
+import { ReportService } from '../../../core/services/report.service';
+import { ClinicInfoService } from '../../../core/services/clinic-info.service';
+import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../../core/print-letterhead';
 import { Appointment, AppointmentStatus, CatalogItem, Intervention, Patient } from '../../../core/models';
 import { STATUS_LABELS, INTERVENTION_COLORS, APPOINTMENT_STATUSES } from '../../../core/constants';
+import { AppointmentReport } from '../../../core/services/report.service';
 import { ToothChartComponent } from '../../../shared/components/tooth-chart';
 import { ToothPickerDialogComponent } from './tooth-picker-dialog.component';
 import { PaymentDialogComponent } from './payment-dialog.component';
@@ -60,8 +64,11 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   private intSvc = inject(InterventionService);
   private catalogSvc = inject(CatalogService);
   private paySvc = inject(PaymentService);
+  private reportSvc = inject(ReportService);
+  private clinicInfoSvc = inject(ClinicInfoService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private logoBase64 = signal<string | undefined>(undefined);
 
   // Debounced catalog search
   private catalogSearch$ = new Subject<string>();
@@ -108,6 +115,7 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const id = +this.route.snapshot.paramMap.get('id')!;
+    fetchLogoAsBase64(this.clinicInfoSvc.clinicInfo().logoUrl).then(b64 => this.logoBase64.set(b64));
     this.apptSvc.getById(id).subscribe({
       next: a => {
         this.appointment.set(a);
@@ -294,6 +302,110 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
         this.loadInterventions(this.appointment()!.id);
         this.snackBar.open('Уплатата е евидентирана', 'OK', { duration: 3000 });
       });
+    });
+  }
+
+  printReport(): void {
+    const a = this.appointment();
+    if (!a) return;
+    this.clinicInfoSvc.ensureLoaded().pipe(
+      switchMap(() => this.reportSvc.appointmentReport(a.id))
+    ).subscribe(r => {
+      const fmt = (n: number) => n.toLocaleString('mk-MK');
+      const fmtDate = (iso: string | null) => {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+      };
+      const fmtTime = (iso: string) => {
+        const d = new Date(iso);
+        return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      };
+      const dur = Math.round((new Date(r.endsAt).getTime() - new Date(r.startsAt).getTime()) / 60000);
+      const sl = (s: string) => STATUS_LABELS[s?.toLowerCase()] ?? s;
+
+      const intRows = r.interventions.map(i =>
+        `<tr><td>${i.name}</td><td>${[...i.teeth].sort((x, y) => x - y).join(', ') || '—'}</td>
+         <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.paidAmount)}</td>
+         <td class="num${i.outstanding > 0 ? ' debt' : ''}">${fmt(i.outstanding)}</td>
+         ${i.note ? `<td>${i.note}</td>` : '<td>—</td>'}</tr>`
+      ).join('');
+
+      const patientInfo = `${r.firstName} ${r.lastName}` +
+        (r.dateOfBirth ? ` · Роден/а: ${fmtDate(r.dateOfBirth)}` : '') +
+        (r.phone ? ` · Тел: ${r.phone}` : '');
+
+      const now = new Date();
+      const fmtNow = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Извештај за средба — ${r.firstName} ${r.lastName}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #222; font-size: 13px; }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
+  h3 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; }
+  .subtitle { font-size: 11px; color: #666; margin-bottom: 20px; }
+  .patient-info { font-size: 13px; margin-bottom: 16px; color: #333; }
+  .appt-detail { font-size: 13px; margin-bottom: 12px; }
+  .appt-notes { font-size: 12px; color: #555; margin: 4px 0 8px; }
+  .summary { display: flex; gap: 32px; margin-bottom: 20px; }
+  .summary-item { display: flex; flex-direction: column; }
+  .summary-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+  .summary-value { font-size: 18px; font-weight: 600; }
+  .summary-value.paid { color: #2e7d32; }
+  .summary-value.debt { color: #c62828; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { background: #f5f5f5; text-align: left; padding: 8px 10px; border-bottom: 2px solid #ddd;
+       font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #555; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; }
+  th.num { text-align: right; }
+  .debt { color: #c62828; font-weight: 500; }
+  tfoot td { border-top: 2px solid #ddd; font-weight: 600; padding-top: 10px; }
+  .signature-area { margin-top: 40px; padding-top: 16px; }
+  .sig-line { width: 250px; border-top: 1px solid #999; padding-top: 6px; font-size: 11px; color: #666; text-align: center; }
+${letterheadStyles()}
+</style>
+</head><body>
+${letterheadHtml(this.clinicInfoSvc.clinicInfo(), this.logoBase64())}
+<h1>Извештај за средба — ${r.firstName} ${r.lastName}</h1>
+<p class="subtitle">Печатено: ${fmtNow}</p>
+<p class="patient-info">${patientInfo}</p>
+<div class="appt-detail">
+  <strong>Датум:</strong> ${fmtDate(r.startsAt)} &nbsp;
+  <strong>Време:</strong> ${fmtTime(r.startsAt)} — ${fmtTime(r.endsAt)} (${dur} мин) &nbsp;
+  <strong>Статус:</strong> ${sl(r.status)}
+</div>
+${r.notes ? `<p class="appt-notes"><strong>Белешки:</strong> ${r.notes}</p>` : ''}
+<div class="summary">
+  <div class="summary-item"><span class="summary-label">Вкупно</span><span class="summary-value">${fmt(r.totalCharged)} ден</span></div>
+  <div class="summary-item"><span class="summary-label">Платено</span><span class="summary-value paid">${fmt(r.totalPaid)} ден</span></div>
+  <div class="summary-item"><span class="summary-label">Долг</span><span class="summary-value${r.totalOutstanding > 0 ? ' debt' : ''}">${fmt(r.totalOutstanding)} ден</span></div>
+</div>
+${r.interventions.length > 0 ? `
+<table>
+  <thead><tr><th>Интервенција</th><th>Заби</th><th class="num">Цена</th><th class="num">Платено</th><th class="num">Долг</th><th>Белешка</th></tr></thead>
+  <tbody>${intRows}</tbody>
+  <tfoot><tr><td colspan="2"><strong>Вкупно</strong></td>
+    <td class="num"><strong>${fmt(r.totalCharged)}</strong></td>
+    <td class="num"><strong>${fmt(r.totalPaid)}</strong></td>
+    <td class="num${r.totalOutstanding > 0 ? ' debt' : ''}"><strong>${fmt(r.totalOutstanding)}</strong></td>
+    <td></td></tr></tfoot>
+</table>` : '<p>Нема интервенции</p>'}
+<div class="signature-area">
+  <div class="sig-line">Потпис и печат на ординација</div>
+</div>
+<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}</script>
+</body></html>`;
+
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+      }
     });
   }
 

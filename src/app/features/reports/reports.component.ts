@@ -15,10 +15,14 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { ReportService, OutstandingBalance, PatientFinancialReport } from '../../core/services/report.service';
+import {
+  ReportService, OutstandingBalance, PatientFinancialReport,
+  PatientHistoryReport, AppointmentReport,
+} from '../../core/services/report.service';
 import { ClinicInfoService } from '../../core/services/clinic-info.service';
 import { PatientService } from '../../core/services/patient.service';
 import { ReportData, Patient } from '../../core/models';
+import { STATUS_LABELS } from '../../core/constants';
 import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../core/print-letterhead';
 import * as XLSX from 'xlsx';
 import { Subject } from 'rxjs';
@@ -77,6 +81,13 @@ export class ReportsComponent implements OnInit {
   patientReportCols = ['date', 'intervention', 'teeth', 'price', 'paid', 'outstanding'];
   private searchSubject = new Subject<string>();
 
+  // Patient reports (for patient handout)
+  prQuery = signal('');
+  prSearchResults = signal<Patient[]>([]);
+  prHistory = signal<PatientHistoryReport | null>(null);
+  private prSearchSubject = new Subject<string>();
+  statusLabel = (s: string) => STATUS_LABELS[s?.toLowerCase()] ?? s;
+
   maxBarValue = computed(() => {
     const vals = this.data().revenueByType.map(r => r.amount);
     return vals.length ? Math.max(...vals) : 1;
@@ -130,6 +141,13 @@ export class ReportsComponent implements OnInit {
       filter(q => q.length >= 2),
       switchMap(q => this.patientSvc.search(q, 0, 10)),
     ).subscribe(page => this.patientSearchResults.set(page.content));
+
+    this.prSearchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      filter(q => q.length >= 2),
+      switchMap(q => this.patientSvc.search(q, 0, 10)),
+    ).subscribe(page => this.prSearchResults.set(page.content));
   }
 
   ngOnInit(): void {
@@ -276,7 +294,7 @@ export class ReportsComponent implements OnInit {
     );
   }
 
-  private openPrintWindow(title: string, body: string): void {
+  private openPrintWindow(title: string, body: string, patientReport = false): void {
     const now = new Date();
     const fmtNow = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
@@ -306,6 +324,17 @@ export class ReportsComponent implements OnInit {
   .debt { color: #c62828; font-weight: 500; }
   tfoot td { border-top: 2px solid #ddd; font-weight: 600; padding-top: 10px; }
 ${letterheadStyles()}
+${patientReport ? `
+  .patient-info { font-size: 13px; margin-bottom: 16px; color: #333; }
+  .appt-block { margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; }
+  .appt-header { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+  .appt-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #e8e8e8; }
+  .appt-notes { font-size: 12px; color: #555; margin: 4px 0 8px; }
+  .appt-detail { font-size: 13px; margin-bottom: 12px; }
+  .no-int { font-size: 12px; color: #999; margin: 4px 0; }
+  .signature-area { margin-top: 40px; padding-top: 16px; }
+  .sig-line { width: 250px; border-top: 1px solid #999; padding-top: 6px; font-size: 11px; color: #666; text-align: center; }
+` : ''}
 </style>
 </head><body>
 ${letterheadHtml(this.clinicInfoSvc.clinicInfo(), this.logoBase64())}
@@ -322,7 +351,151 @@ ${body}
     }
   }
 
-  // ── Patient search ────────────────────────────────────────────────────────
+  // ── Patient reports (handout) ────────────────────────────────────────────
+
+  onPrSearch(query: string): void {
+    this.prQuery.set(query);
+    if (query.length < 2) {
+      this.prSearchResults.set([]);
+      return;
+    }
+    this.prSearchSubject.next(query);
+  }
+
+  selectPrPatient(p: Patient): void {
+    this.prQuery.set(`${p.firstName} ${p.lastName}`);
+    this.prSearchResults.set([]);
+    this.reportSvc.patientHistoryReport(p.id).subscribe(r => this.prHistory.set(r));
+  }
+
+  printPatientHistory(): void {
+    const h = this.prHistory();
+    if (!h) return;
+    const fmt = (n: number) => n.toLocaleString('mk-MK');
+    const fmtDate = (iso: string | null) => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+    };
+    const fmtTime = (iso: string) => {
+      const d = new Date(iso);
+      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    };
+    const dur = (s: string, e: string) => Math.round((new Date(e).getTime() - new Date(s).getTime()) / 60000);
+
+    let apptBlocks = '';
+    for (const a of h.appointments) {
+      const intRows = a.interventions.map(i =>
+        `<tr><td>${i.name}</td><td>${[...i.teeth].sort((a, b) => a - b).join(', ') || '—'}</td>
+         <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.paidAmount)}</td>
+         <td class="num${i.outstanding > 0 ? ' debt' : ''}">${fmt(i.outstanding)}</td>
+         ${i.note ? `<td>${i.note}</td>` : '<td>—</td>'}</tr>`
+      ).join('');
+
+      apptBlocks += `
+        <div class="appt-block">
+          <div class="appt-header">
+            <strong>${fmtDate(a.startsAt)}</strong> ${fmtTime(a.startsAt)} — ${fmtTime(a.endsAt)} (${dur(a.startsAt, a.endsAt)} мин)
+            <span class="appt-status">${this.statusLabel(a.status)}</span>
+          </div>
+          ${a.notes ? `<p class="appt-notes">${a.notes}</p>` : ''}
+          ${a.interventions.length > 0 ? `
+          <table>
+            <thead><tr><th>Интервенција</th><th>Заби</th><th class="num">Цена</th><th class="num">Платено</th><th class="num">Долг</th><th>Белешка</th></tr></thead>
+            <tbody>${intRows}</tbody>
+            <tfoot><tr><td colspan="2"><strong>Вкупно</strong></td>
+              <td class="num"><strong>${fmt(a.appointmentCharged)}</strong></td>
+              <td class="num"><strong>${fmt(a.appointmentPaid)}</strong></td>
+              <td class="num${a.appointmentOutstanding > 0 ? ' debt' : ''}"><strong>${fmt(a.appointmentOutstanding)}</strong></td>
+              <td></td></tr></tfoot>
+          </table>` : '<p class="no-int">Нема интервенции</p>'}
+        </div>`;
+    }
+
+    const patientInfo = `${h.firstName} ${h.lastName}` +
+      (h.dateOfBirth ? ` · Роден/а: ${fmtDate(h.dateOfBirth)}` : '') +
+      (h.phone ? ` · Тел: ${h.phone}` : '') +
+      (h.embg ? ` · ЕМБГ: ${h.embg}` : '');
+
+    this.openPrintWindow(
+      `Извештај за пациент — ${h.firstName} ${h.lastName}`,
+      `<p class="patient-info">${patientInfo}</p>
+      <div class="summary">
+        <div class="summary-item"><span class="summary-label">Вкупно наплатено</span><span class="summary-value">${fmt(h.totalCharged)} ден</span></div>
+        <div class="summary-item"><span class="summary-label">Платено</span><span class="summary-value paid">${fmt(h.totalPaid)} ден</span></div>
+        <div class="summary-item"><span class="summary-label">Долг</span><span class="summary-value${h.totalOutstanding > 0 ? ' debt' : ''}">${fmt(h.totalOutstanding)} ден</span></div>
+      </div>
+      <h3>Средби (${h.appointments.length})</h3>
+      ${h.appointments.length > 0 ? apptBlocks : '<p>Нема средби</p>'}
+      <div class="signature-area">
+        <div class="sig-line">Потпис и печат на ординација</div>
+      </div>`,
+      true
+    );
+  }
+
+  printAppointmentReport(appointmentId: number): void {
+    this.reportSvc.appointmentReport(appointmentId).subscribe(r => {
+      this.doPrintAppointmentReport(r);
+    });
+  }
+
+  private doPrintAppointmentReport(r: AppointmentReport): void {
+    const fmt = (n: number) => n.toLocaleString('mk-MK');
+    const fmtDate = (iso: string | null) => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+    };
+    const fmtTime = (iso: string) => {
+      const d = new Date(iso);
+      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    };
+    const dur = Math.round((new Date(r.endsAt).getTime() - new Date(r.startsAt).getTime()) / 60000);
+
+    const intRows = r.interventions.map(i =>
+      `<tr><td>${i.name}</td><td>${[...i.teeth].sort((a, b) => a - b).join(', ') || '—'}</td>
+       <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.paidAmount)}</td>
+       <td class="num${i.outstanding > 0 ? ' debt' : ''}">${fmt(i.outstanding)}</td>
+       ${i.note ? `<td>${i.note}</td>` : '<td>—</td>'}</tr>`
+    ).join('');
+
+    const patientInfo = `${r.firstName} ${r.lastName}` +
+      (r.dateOfBirth ? ` · Роден/а: ${fmtDate(r.dateOfBirth)}` : '') +
+      (r.phone ? ` · Тел: ${r.phone}` : '');
+
+    this.openPrintWindow(
+      `Извештај за средба — ${r.firstName} ${r.lastName}`,
+      `<p class="patient-info">${patientInfo}</p>
+      <div class="appt-detail">
+        <strong>Датум:</strong> ${fmtDate(r.startsAt)} &nbsp;
+        <strong>Време:</strong> ${fmtTime(r.startsAt)} — ${fmtTime(r.endsAt)} (${dur} мин) &nbsp;
+        <strong>Статус:</strong> ${this.statusLabel(r.status)}
+      </div>
+      ${r.notes ? `<p class="appt-notes"><strong>Белешки:</strong> ${r.notes}</p>` : ''}
+      <div class="summary">
+        <div class="summary-item"><span class="summary-label">Вкупно</span><span class="summary-value">${fmt(r.totalCharged)} ден</span></div>
+        <div class="summary-item"><span class="summary-label">Платено</span><span class="summary-value paid">${fmt(r.totalPaid)} ден</span></div>
+        <div class="summary-item"><span class="summary-label">Долг</span><span class="summary-value${r.totalOutstanding > 0 ? ' debt' : ''}">${fmt(r.totalOutstanding)} ден</span></div>
+      </div>
+      ${r.interventions.length > 0 ? `
+      <table>
+        <thead><tr><th>Интервенција</th><th>Заби</th><th class="num">Цена</th><th class="num">Платено</th><th class="num">Долг</th><th>Белешка</th></tr></thead>
+        <tbody>${intRows}</tbody>
+        <tfoot><tr><td colspan="2"><strong>Вкупно</strong></td>
+          <td class="num"><strong>${fmt(r.totalCharged)}</strong></td>
+          <td class="num"><strong>${fmt(r.totalPaid)}</strong></td>
+          <td class="num${r.totalOutstanding > 0 ? ' debt' : ''}"><strong>${fmt(r.totalOutstanding)}</strong></td>
+          <td></td></tr></tfoot>
+      </table>` : '<p>Нема интервенции</p>'}
+      <div class="signature-area">
+        <div class="sig-line">Потпис и печат на ординација</div>
+      </div>`,
+      true
+    );
+  }
+
+  // ── Patient search (financial) ─────────────────────────────────────────────
 
   onPatientSearch(query: string): void {
     this.patientQuery.set(query);

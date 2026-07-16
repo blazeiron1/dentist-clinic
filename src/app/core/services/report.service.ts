@@ -35,6 +35,60 @@ export interface PatientInterventionDetail {
   status: string;
 }
 
+export interface PatientHistoryReport {
+  patientId: number;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  phone: string | null;
+  email: string | null;
+  embg: string | null;
+  appointments: AppointmentReportEntry[];
+  totalCharged: number;
+  totalPaid: number;
+  totalOutstanding: number;
+}
+
+export interface AppointmentReportEntry {
+  id: number;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  notes: string | null;
+  interventions: ReportInterventionEntry[];
+  appointmentCharged: number;
+  appointmentPaid: number;
+  appointmentOutstanding: number;
+}
+
+export interface ReportInterventionEntry {
+  id: number;
+  name: string;
+  teeth: number[];
+  price: number;
+  paidAmount: number;
+  outstanding: number;
+  note: string | null;
+  performedAt: string | null;
+}
+
+export interface AppointmentReport {
+  appointmentId: number;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  notes: string | null;
+  patientId: number;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  phone: string | null;
+  interventions: ReportInterventionEntry[];
+  totalCharged: number;
+  totalPaid: number;
+  totalOutstanding: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportService {
   private http = inject(HttpClient);
@@ -73,6 +127,14 @@ export class ReportService {
 
   patientReport(patientId: number): Observable<PatientFinancialReport> {
     return this.http.get<PatientFinancialReport>(`${this.api}/reports/patient/${patientId}`);
+  }
+
+  patientHistoryReport(patientId: number): Observable<PatientHistoryReport> {
+    return this.http.get<PatientHistoryReport>(`${this.api}/reports/patient/${patientId}/history`);
+  }
+
+  appointmentReport(appointmentId: number): Observable<AppointmentReport> {
+    return this.http.get<AppointmentReport>(`${this.api}/reports/appointment/${appointmentId}`);
   }
 }
 

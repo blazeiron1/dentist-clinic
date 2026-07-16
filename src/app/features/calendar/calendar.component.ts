@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { OverlayModule, ConnectedPosition } from '@angular/cdk/overlay';
@@ -37,6 +38,7 @@ interface CalendarAppt {
 export class CalendarComponent implements OnInit, OnDestroy {
   private apptSvc = inject(AppointmentService);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
   private router = inject(Router);
 
   view = signal<CalendarView>('week');
@@ -240,6 +242,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const day = this.view() === 'week' ? this.weekDays()[dayIndex] : this.anchorDate();
     const dateTime = new Date(day);
     dateTime.setHours(hour, 0, 0, 0);
+    if (dateTime.getTime() < Date.now()) {
+      this.snackBar.open('Не може да се закаже средба во минатото', 'OK', { duration: 3000 });
+      return;
+    }
     const ref = this.dialog.open(NewAppointmentDialogComponent, {
       width: '460px',
       data: { dateTime },

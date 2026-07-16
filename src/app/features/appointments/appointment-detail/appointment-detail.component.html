@@ -35,6 +35,11 @@
 
       <!-- Status actions -->
       <div class="status-actions">
+        @if (a.status === 'completed') {
+          <button mat-stroked-button (click)="printReport()">
+            <mat-icon>print</mat-icon> Печати извештај
+          </button>
+        }
         @if (a.status === 'scheduled') {
           <button mat-stroked-button color="primary" (click)="setStatus('completed')">
             <mat-icon>check_circle</mat-icon> Заврши

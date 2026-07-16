@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, retry, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ClinicInfo {
@@ -24,10 +24,24 @@ export class ClinicInfoService {
     logoUrl: '/logo.png',
   });
 
+  private loaded = false;
+
   load(): Observable<ClinicInfo> {
     return this.http.get<ClinicInfo>(this.api).pipe(
-      tap(info => this.clinicInfo.set(info))
+      retry({ count: 2, delay: 1000 }),
+      tap(info => {
+        this.clinicInfo.set(info);
+        this.loaded = true;
+      }),
+      catchError(() => of(this.clinicInfo()))
     );
+  }
+
+  ensureLoaded(): Observable<ClinicInfo> {
+    if (this.loaded && this.clinicInfo().name) {
+      return of(this.clinicInfo());
+    }
+    return this.load();
   }
 
   update(info: ClinicInfo): Observable<ClinicInfo> {

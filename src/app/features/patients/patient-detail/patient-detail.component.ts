@@ -23,11 +23,13 @@ import { PatientService } from '../../../core/services/patient.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { InterventionService } from '../../../core/services/intervention.service';
 import { DocumentService } from '../../../core/services/document.service';
+import { ReportService } from '../../../core/services/report.service';
 import {
   Patient, PatientCreate, Appointment, Intervention,
   Allergy, Condition, Medication, PatientDocument,
 } from '../../../core/models';
 import { STATUS_LABELS, STATUS_MAT_COLORS } from '../../../core/constants';
+import { PatientHistoryReport } from '../../../core/services/report.service';
 import { ClinicInfoService } from '../../../core/services/clinic-info.service';
 import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../../core/print-letterhead';
 import { DeletePatientDialogComponent } from './delete-patient-dialog.component';
@@ -52,6 +54,7 @@ export class PatientDetailComponent implements OnInit {
   private apptSvc = inject(AppointmentService);
   private intSvc = inject(InterventionService);
   private docSvc = inject(DocumentService);
+  private reportSvc = inject(ReportService);
   private clinicInfoSvc = inject(ClinicInfoService);
   private dialog = inject(MatDialog);
   private logoBase64 = signal<string | undefined>(undefined);
@@ -239,6 +242,119 @@ ${interventions.length > 0 ? `
       w.document.write(html);
       w.document.close();
     }
+  }
+
+  printPatientHistory(): void {
+    const p = this.patient()!;
+    this.reportSvc.patientHistoryReport(p.id).subscribe(h => {
+      const fmt = (n: number) => n.toLocaleString('mk-MK');
+      const fmtDate = (iso?: string | null) => {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+      };
+      const fmtTime = (iso: string) => {
+        const d = new Date(iso);
+        return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      };
+      const dur = (s: string, e: string) => Math.round((new Date(e).getTime() - new Date(s).getTime()) / 60000);
+      const sl = (s: string) => STATUS_LABELS[s?.toLowerCase()] ?? s;
+
+      let apptBlocks = '';
+      for (const a of h.appointments) {
+        const intRows = a.interventions.map(i =>
+          `<tr><td>${i.name}</td><td>${[...i.teeth].sort((x, y) => x - y).join(', ') || '—'}</td>
+           <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.paidAmount)}</td>
+           <td class="num${i.outstanding > 0 ? ' debt' : ''}">${fmt(i.outstanding)}</td>
+           ${i.note ? `<td>${i.note}</td>` : '<td>—</td>'}</tr>`
+        ).join('');
+
+        apptBlocks += `
+          <div class="appt-block">
+            <div class="appt-header">
+              <strong>${fmtDate(a.startsAt)}</strong> ${fmtTime(a.startsAt)} — ${fmtTime(a.endsAt)} (${dur(a.startsAt, a.endsAt)} мин)
+              <span class="appt-status">${sl(a.status)}</span>
+            </div>
+            ${a.notes ? `<p class="appt-notes">${a.notes}</p>` : ''}
+            ${a.interventions.length > 0 ? `
+            <table>
+              <thead><tr><th>Интервенција</th><th>Заби</th><th class="num">Цена</th><th class="num">Платено</th><th class="num">Долг</th><th>Белешка</th></tr></thead>
+              <tbody>${intRows}</tbody>
+              <tfoot><tr><td colspan="2"><strong>Вкупно</strong></td>
+                <td class="num"><strong>${fmt(a.appointmentCharged)}</strong></td>
+                <td class="num"><strong>${fmt(a.appointmentPaid)}</strong></td>
+                <td class="num${a.appointmentOutstanding > 0 ? ' debt' : ''}"><strong>${fmt(a.appointmentOutstanding)}</strong></td>
+                <td></td></tr></tfoot>
+            </table>` : '<p class="no-int">Нема интервенции</p>'}
+          </div>`;
+      }
+
+      const patientInfo = `${h.firstName} ${h.lastName}` +
+        (h.dateOfBirth ? ` · Роден/а: ${fmtDate(h.dateOfBirth)}` : '') +
+        (h.phone ? ` · Тел: ${h.phone}` : '') +
+        (h.embg ? ` · ЕМБГ: ${h.embg}` : '');
+
+      const now = new Date();
+      const fmtNow = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Извештај за пациент — ${h.firstName} ${h.lastName}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; padding: 24px; color: #222; font-size: 13px; }
+  h1 { font-size: 18px; font-weight: 600; margin-bottom: 2px; }
+  h3 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; }
+  .subtitle { font-size: 11px; color: #666; margin-bottom: 20px; }
+  .patient-info { font-size: 13px; margin-bottom: 16px; color: #333; }
+  .summary { display: flex; gap: 32px; margin-bottom: 20px; }
+  .summary-item { display: flex; flex-direction: column; }
+  .summary-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+  .summary-value { font-size: 18px; font-weight: 600; }
+  .summary-value.paid { color: #2e7d32; }
+  .summary-value.debt { color: #c62828; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { background: #f5f5f5; text-align: left; padding: 8px 10px; border-bottom: 2px solid #ddd;
+       font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #555; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; }
+  th.num { text-align: right; }
+  .debt { color: #c62828; font-weight: 500; }
+  tfoot td { border-top: 2px solid #ddd; font-weight: 600; padding-top: 10px; }
+  .appt-block { margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; }
+  .appt-header { font-size: 13px; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+  .appt-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #e8e8e8; }
+  .appt-notes { font-size: 12px; color: #555; margin: 4px 0 8px; }
+  .no-int { font-size: 12px; color: #999; margin: 4px 0; }
+  .signature-area { margin-top: 40px; padding-top: 16px; }
+  .sig-line { width: 250px; border-top: 1px solid #999; padding-top: 6px; font-size: 11px; color: #666; text-align: center; }
+${letterheadStyles()}
+</style>
+</head><body>
+${letterheadHtml(this.clinicInfoSvc.clinicInfo(), this.logoBase64())}
+<h1>Извештај за пациент — ${h.firstName} ${h.lastName}</h1>
+<p class="subtitle">Печатено: ${fmtNow}</p>
+<p class="patient-info">${patientInfo}</p>
+<div class="summary">
+  <div class="summary-item"><span class="summary-label">Вкупно наплатено</span><span class="summary-value">${fmt(h.totalCharged)} ден</span></div>
+  <div class="summary-item"><span class="summary-label">Платено</span><span class="summary-value paid">${fmt(h.totalPaid)} ден</span></div>
+  <div class="summary-item"><span class="summary-label">Долг</span><span class="summary-value${h.totalOutstanding > 0 ? ' debt' : ''}">${fmt(h.totalOutstanding)} ден</span></div>
+</div>
+<h3>Средби (${h.appointments.length})</h3>
+${h.appointments.length > 0 ? apptBlocks : '<p>Нема средби</p>'}
+<div class="signature-area">
+  <div class="sig-line">Потпис и печат на ординација</div>
+</div>
+<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}</script>
+</body></html>`;
+
+      const w = window.open('', '_blank');
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+      }
+    });
   }
 
   // ── Edit ────────────────────────────────────────────────────────────────────

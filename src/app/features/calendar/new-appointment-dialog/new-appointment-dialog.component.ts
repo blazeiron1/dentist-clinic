@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { PatientService } from '../../../core/services/patient.service';
 import { Patient } from '../../../core/models';
 import { DURATION_OPTIONS } from '../../../core/constants';
@@ -47,7 +48,7 @@ import { DURATION_OPTIONS } from '../../../core/constants';
   <mat-form-field appearance="outline" class="full">
     <mat-label>Датум и час</mat-label>
     <input matInput type="datetime-local" [ngModel]="dateTimeStr()"
-           (ngModelChange)="dateTimeStr.set($event)"
+           (ngModelChange)="onDateTimeChange($event)"
            required />
     @if (submitted() && !dateTimeStr()) {
       <mat-error>Датумот и часот се задолжителни</mat-error>
@@ -83,6 +84,7 @@ import { DURATION_OPTIONS } from '../../../core/constants';
 export class NewAppointmentDialogComponent implements OnInit {
   private patientSvc = inject(PatientService);
   private dialogRef = inject(MatDialogRef<NewAppointmentDialogComponent>);
+  private snackBar = inject(MatSnackBar);
   data = inject(MAT_DIALOG_DATA) as { dateTime?: Date };
 
   patientQuery = signal('');
@@ -128,6 +130,13 @@ export class NewAppointmentDialogComponent implements OnInit {
     }
   }
 
+  onDateTimeChange(value: string): void {
+    this.dateTimeStr.set(value);
+    if (value && new Date(value).getTime() < Date.now()) {
+      this.snackBar.open('Не може да се закаже средба во минатото', 'OK', { duration: 3000 });
+    }
+  }
+
   displayPatient(p: Patient | null): string {
     return p ? `${p.firstName} ${p.lastName}` : '';
   }
@@ -136,6 +145,10 @@ export class NewAppointmentDialogComponent implements OnInit {
     this.submitted.set(true);
     const patient = this.selectedPatient();
     if (!patient || !this.dateTimeStr()) return;
+    if (new Date(this.dateTimeStr()).getTime() < Date.now()) {
+      this.snackBar.open('Не може да се закаже средба во минатото', 'OK', { duration: 3000 });
+      return;
+    }
     const startsAt = new Date(this.dateTimeStr()).toISOString();
     const endsAt = new Date(new Date(this.dateTimeStr()).getTime() + this.duration() * 60000).toISOString();
     this.dialogRef.close({
