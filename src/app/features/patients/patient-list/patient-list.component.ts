@@ -1,9 +1,11 @@
 import {
-  Component, inject, signal, OnInit, ChangeDetectionStrategy,
+  Component, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { MatTableModule } from '@angular/material/table';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { PatientService } from '../../../core/services/patient.service';
 import { Patient } from '../../../core/models';
 
@@ -27,9 +30,13 @@ import { Patient } from '../../../core/models';
   templateUrl: './patient-list.component.html',
   styleUrl: './patient-list.component.scss',
 })
-export class PatientListComponent implements OnInit {
+export class PatientListComponent implements OnInit, OnDestroy {
   private patientSvc = inject(PatientService);
   private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+
+  private searchSubject = new Subject<string>();
+  private searchSub!: Subscription;
 
   query = signal('');
   page = signal(0);
@@ -42,13 +49,27 @@ export class PatientListComponent implements OnInit {
   columns = ['avatar', 'name', 'phone', 'embg', 'created', 'arrow'];
 
   ngOnInit(): void {
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(300),
+    ).subscribe(() => {
+      this.page.set(0);
+      this.loadPatients();
+    });
     this.loadPatients();
+  }
+
+  ngOnDestroy(): void {
+    this.searchSub?.unsubscribe();
   }
 
   onSearch(q: string): void {
     this.query.set(q);
-    this.page.set(0);
-    this.loadPatients();
+    if (q === '') {
+      this.page.set(0);
+      this.loadPatients();
+    } else {
+      this.searchSubject.next(q);
+    }
   }
 
   onPage(e: PageEvent): void {
@@ -67,10 +88,16 @@ export class PatientListComponent implements OnInit {
 
   private loadPatients(): void {
     this.loading.set(true);
-    this.patientSvc.search(this.query() || undefined, this.page(), this.pageSize()).subscribe(page => {
-      this.displayedPatients.set(page.content);
-      this.totalCount.set(page.totalElements);
-      this.loading.set(false);
+    this.patientSvc.search(this.query() || undefined, this.page(), this.pageSize()).subscribe({
+      next: page => {
+        this.displayedPatients.set(page.content);
+        this.totalCount.set(page.totalElements);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.snackBar.open('Грешка при вчитување на пациенти', 'OK');
+      },
     });
   }
 }

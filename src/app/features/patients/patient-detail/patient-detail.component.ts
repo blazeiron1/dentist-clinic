@@ -19,6 +19,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { PatientService } from '../../../core/services/patient.service';
 import { AppointmentService } from '../../../core/services/appointment.service';
 import { InterventionService } from '../../../core/services/intervention.service';
@@ -33,6 +34,7 @@ import { PatientHistoryReport } from '../../../core/services/report.service';
 import { ClinicInfoService } from '../../../core/services/clinic-info.service';
 import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../../core/print-letterhead';
 import { DeletePatientDialogComponent } from './delete-patient-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-patient-detail',
@@ -57,6 +59,7 @@ export class PatientDetailComponent implements OnInit {
   private reportSvc = inject(ReportService);
   private clinicInfoSvc = inject(ClinicInfoService);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
   private logoBase64 = signal<string | undefined>(undefined);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -120,31 +123,47 @@ export class PatientDetailComponent implements OnInit {
   }
 
   private loadMedicalData(patientId: number): void {
-    this.patientSvc.getAllergies(patientId).subscribe(a => this.allergies.set(a));
-    this.patientSvc.getConditions(patientId).subscribe(c => this.conditions.set(c));
-    this.patientSvc.getMedications(patientId).subscribe(m => this.medications.set(m));
+    this.patientSvc.getAllergies(patientId).subscribe({
+      next: a => this.allergies.set(a),
+      error: () => this.snackBar.open('Грешка при вчитување на алергии', 'OK'),
+    });
+    this.patientSvc.getConditions(patientId).subscribe({
+      next: c => this.conditions.set(c),
+      error: () => this.snackBar.open('Грешка при вчитување на состојби', 'OK'),
+    });
+    this.patientSvc.getMedications(patientId).subscribe({
+      next: m => this.medications.set(m),
+      error: () => this.snackBar.open('Грешка при вчитување на лекови', 'OK'),
+    });
   }
 
   private loadAppointments(patientId: number): void {
     const far = new Date('2000-01-01');
     const future = new Date('2099-12-31');
-    this.apptSvc.findByRange(far, future, patientId).subscribe(appts => {
-      const sorted = appts.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
-      this.appointments.set(sorted);
-      this.loadAllInterventions(sorted);
+    this.apptSvc.findByRange(far, future, patientId).subscribe({
+      next: appts => {
+        const sorted = appts.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+        this.appointments.set(sorted);
+        this.loadAllInterventions(sorted);
+      },
+      error: () => this.snackBar.open('Грешка при вчитување на средби', 'OK'),
     });
   }
 
   private loadAllInterventions(appts: Appointment[]): void {
     if (appts.length === 0) { this.allInterventions.set([]); return; }
     const reqs = appts.map(a => this.intSvc.getByAppointment(a.id));
-    forkJoin(reqs).subscribe(results => {
-      this.allInterventions.set(results.flat());
+    forkJoin(reqs).subscribe({
+      next: results => this.allInterventions.set(results.flat()),
+      error: () => this.snackBar.open('Грешка при вчитување на интервенции', 'OK'),
     });
   }
 
   private loadDocuments(patientId: number): void {
-    this.docSvc.list(patientId).subscribe(docs => this.documents.set(docs));
+    this.docSvc.list(patientId).subscribe({
+      next: docs => this.documents.set(docs),
+      error: () => this.snackBar.open('Грешка при вчитување на документи', 'OK'),
+    });
   }
 
   printFinancials(): void {
@@ -456,9 +475,16 @@ ${h.appointments.length > 0 ? apptBlocks : '<p>Нема средби</p>'}
   }
 
   removeAllergy(a: Allergy): void {
-    const p = this.patient()!;
-    this.patientSvc.removeAllergy(p.id, a.id).subscribe(() => {
-      this.allergies.update(list => list.filter(x => x.id !== a.id));
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '360px',
+      data: { title: 'Бришење', message: `Избриши ја алергијата „${a.name}"?`, confirmText: 'Избриши', warn: true },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      const p = this.patient()!;
+      this.patientSvc.removeAllergy(p.id, a.id).subscribe(() => {
+        this.allergies.update(list => list.filter(x => x.id !== a.id));
+      });
     });
   }
 
@@ -474,9 +500,16 @@ ${h.appointments.length > 0 ? apptBlocks : '<p>Нема средби</p>'}
   }
 
   removeCondition(c: Condition): void {
-    const p = this.patient()!;
-    this.patientSvc.removeCondition(p.id, c.id).subscribe(() => {
-      this.conditions.update(list => list.filter(x => x.id !== c.id));
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '360px',
+      data: { title: 'Бришење', message: `Избриши ја состојбата „${c.name}"?`, confirmText: 'Избриши', warn: true },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      const p = this.patient()!;
+      this.patientSvc.removeCondition(p.id, c.id).subscribe(() => {
+        this.conditions.update(list => list.filter(x => x.id !== c.id));
+      });
     });
   }
 
@@ -492,9 +525,16 @@ ${h.appointments.length > 0 ? apptBlocks : '<p>Нема средби</p>'}
   }
 
   removeMedication(m: Medication): void {
-    const p = this.patient()!;
-    this.patientSvc.removeMedication(p.id, m.id).subscribe(() => {
-      this.medications.update(list => list.filter(x => x.id !== m.id));
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '360px',
+      data: { title: 'Бришење', message: `Избриши го лекот „${m.name}"?`, confirmText: 'Избриши', warn: true },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      const p = this.patient()!;
+      this.patientSvc.removeMedication(p.id, m.id).subscribe(() => {
+        this.medications.update(list => list.filter(x => x.id !== m.id));
+      });
     });
   }
 
@@ -558,8 +598,20 @@ ${h.appointments.length > 0 ? apptBlocks : '<p>Нема средби</p>'}
   }
 
   deleteDoc(doc: PatientDocument): void {
-    this.docSvc.delete(doc.id).subscribe(() => {
-      this.documents.update(list => list.filter(d => d.id !== doc.id));
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Бришење на документ',
+        message: `Дали сте сигурни дека сакате да го избришете "${doc.filename}"?`,
+        confirmText: 'Избриши',
+        warn: true,
+      },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.docSvc.delete(doc.id).subscribe(() => {
+        this.documents.update(list => list.filter(d => d.id !== doc.id));
+      });
     });
   }
 

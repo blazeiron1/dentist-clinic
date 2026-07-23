@@ -27,6 +27,7 @@ import { letterheadHtml, letterheadStyles, fetchLogoAsBase64 } from '../../core/
 import * as XLSX from 'xlsx';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, filter } from 'rxjs/operators';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 type Range = 'today' | 'week' | 'month' | 'quarter' | 'custom';
 
@@ -52,6 +53,7 @@ export class ReportsComponent implements OnInit {
   private reportSvc = inject(ReportService);
   private patientSvc = inject(PatientService);
   private clinicInfoSvc = inject(ClinicInfoService);
+  private snackBar = inject(MatSnackBar);
   private logoBase64 = signal<string | undefined>(undefined);
 
   range = signal<Range>('month');
@@ -563,7 +565,7 @@ ${body}
     if (this.apDir() !== 'asc') params['dir'] = this.apDir();
     this.reportSvc.patientsSummary(params).subscribe({
       next: list => this.allPatientsList.set(list),
-      error: err => console.error('patients-summary error:', err),
+      error: () => this.snackBar.open('Грешка при вчитување на збирен извештај', 'OK'),
     });
   }
 

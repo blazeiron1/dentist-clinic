@@ -140,8 +140,9 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadInterventions(appointmentId: number): void {
-    this.intSvc.getByAppointment(appointmentId).subscribe(list => {
-      this.interventions.set(list);
+    this.intSvc.getByAppointment(appointmentId).subscribe({
+      next: list => this.interventions.set(list),
+      error: () => this.snackBar.open('Грешка при вчитување на интервенции', 'OK'),
     });
   }
 
@@ -265,8 +266,20 @@ export class AppointmentDetailComponent implements OnInit, OnDestroy {
   // ── Existing intervention management ─────────────────────────────
 
   removeIntervention(id: number): void {
-    this.intSvc.delete(id).subscribe(() => {
-      this.interventions.update(list => list.filter(i => i.id !== id));
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Бришење на интервенција',
+        message: 'Дали сте сигурни? Ова ќе ги избрише и сите поврзани уплати.',
+        confirmText: 'Избриши',
+        warn: true,
+      },
+    });
+    ref.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.intSvc.delete(id).subscribe(() => {
+        this.interventions.update(list => list.filter(i => i.id !== id));
+      });
     });
   }
 

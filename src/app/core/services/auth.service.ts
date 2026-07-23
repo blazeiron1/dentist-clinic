@@ -35,7 +35,12 @@ export class AuthService {
   restoreSession(): void {
     const saved = localStorage.getItem('auth_user');
     if (saved) {
-      this._user.set(JSON.parse(saved));
+      try {
+        this._user.set(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem('auth_user');
+        return;
+      }
       this.http.get<{ username: string }>(`${this.api}/auth/me`).pipe(
         catchError(() => {
           this._user.set(null);

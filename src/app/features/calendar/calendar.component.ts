@@ -53,7 +53,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
   ];
 
-  readonly hours = Array.from({ length: 12 }, (_, i) => i + 8);
+  readonly hours = Array.from({ length: 14 }, (_, i) => i + 7);
   readonly slotHeight = 60;
 
   readonly months = [
@@ -135,8 +135,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const durationMin = (endDt.getTime() - dt.getTime()) / 60000;
       const dayIdx = days.findIndex(d => d.toDateString() === dt.toDateString());
       if (dayIdx < 0) continue;
-      const minuteFromEight = (dt.getHours() - 8) * 60 + dt.getMinutes();
-      const top = (minuteFromEight / 60) * this.slotHeight;
+      const minuteOffset = (dt.getHours() - 7) * 60 + dt.getMinutes();
+      const top = (minuteOffset / 60) * this.slotHeight;
       const height = Math.max((durationMin / 60) * this.slotHeight - 2, 20);
       buckets[dayIdx].push({
         appt,
@@ -155,8 +155,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const dt = new Date(appt.startsAt);
       const endDt = new Date(appt.endsAt);
       const durationMin = (endDt.getTime() - dt.getTime()) / 60000;
-      const minuteFromEight = (dt.getHours() - 8) * 60 + dt.getMinutes();
-      const top = (minuteFromEight / 60) * this.slotHeight;
+      const minuteOffset = (dt.getHours() - 7) * 60 + dt.getMinutes();
+      const top = (minuteOffset / 60) * this.slotHeight;
       const height = Math.max((durationMin / 60) * this.slotHeight - 2, 20);
       return {
         appt,
@@ -182,10 +182,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   currentTimeTop = computed(() => {
+    this.nowMinute();
     const now = new Date();
-    const minuteFromEight = (now.getHours() - 8) * 60 + now.getMinutes();
-    if (minuteFromEight < 0 || minuteFromEight > 12 * 60) return null;
-    return (minuteFromEight / 60) * this.slotHeight;
+    const minuteOffset = (now.getHours() - 7) * 60 + now.getMinutes();
+    if (minuteOffset < 0 || minuteOffset > 14 * 60) return null;
+    return (minuteOffset / 60) * this.slotHeight;
   });
 
   todayColumnIndex = computed(() => {
@@ -284,9 +285,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
       to.setHours(23, 59, 59, 999);
     }
     this.loading.set(true);
-    this.apptSvc.findByRange(from, to).subscribe(appts => {
-      this._appointments.set(appts);
-      this.loading.set(false);
+    this.apptSvc.findByRange(from, to).subscribe({
+      next: appts => {
+        this._appointments.set(appts);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.snackBar.open('Грешка при вчитување на средби', 'OK');
+      },
     });
   }
 
